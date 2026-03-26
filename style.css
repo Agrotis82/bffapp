@@ -285,3 +285,182 @@ html, body { height: 100%; font-family: var(--fb); background: var(--bg); color:
 .icon-btn:hover { background: var(--hot-l); border-color: var(--hot); color: var(--hot-d); }
 .icon-btn.e:hover { background: var(--teal-l); border-color: var(--teal); color: var(--teal-d); }
 .wa-contact-btn { background: #25D366; border: none; border-radius: 20px; padding: 5px 14px; font-family: var(--fb); font-size: 11px; font-weight: 500; color: #fff; cursor: pointer; display: flex; align-items: center; gap: 5px; white-space: nowrap; }
+
+/* =============================================
+   BFFapp · Estilos módulo Finanzas
+   Agregar al final de style.css
+   ============================================= */
+
+/* STATS HERO FINANZAS */
+.fin-hero {
+  background: var(--hot);
+  border-radius: 18px;
+  padding: 1.1rem 1.25rem;
+  margin-bottom: 1rem;
+  position: relative;
+  overflow: hidden;
+}
+.fin-hero::after {
+  content: '';
+  position: absolute;
+  right: -15px; top: -15px;
+  width: 90px; height: 90px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.07);
+}
+.fin-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 0.75rem;
+}
+.fin-stat-box {
+  background: rgba(255,255,255,0.15);
+  border-radius: 12px;
+  padding: 0.6rem 0.75rem;
+}
+.fin-stat-val { font-size: 16px; font-weight: 500; color: #fff; }
+.fin-stat-lbl { font-size: 10px; color: rgba(255,255,255,0.75); margin-top: 1px; }
+.fin-prog-wrap { background: rgba(255,255,255,0.2); border-radius: 4px; height: 5px; overflow: hidden; }
+.fin-prog-fill { height: 100%; background: #fff; border-radius: 4px; transition: width 0.5s; }
+.fin-prog-labels { display: flex; justify-content: space-between; margin-top: 4px; }
+.fin-prog-labels span { font-size: 10px; color: rgba(255,255,255,0.8); }
+
+/* MONEDA TOGGLE */
+.fin-moneda-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.6rem;
+}
+.fin-moneda-btns { display: flex; gap: 6px; }
+.moneda-btn {
+  padding: 5px 14px;
+  border-radius: 20px;
+  border: 1.5px solid var(--border-med);
+  background: transparent;
+  font-family: var(--fb);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  color: var(--text-sec);
+  transition: all 0.15s;
+}
+.moneda-btn.sel {
+  background: var(--hot-l);
+  border-color: var(--hot-d);
+  color: var(--hot-d);
+}
+
+/* GASTO ROW */
+.fin-gasto-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 0.5px solid var(--border);
+  transition: background 0.12s;
+}
+.fin-gasto-row:last-child { border-bottom: none; }
+.fin-gasto-row:hover { background: var(--surface); margin: 0 -0.75rem; padding: 10px 0.75rem; border-radius: 10px; }
+.fin-gasto-row.saldado { opacity: 0.5; }
+.fin-cat-icon {
+  width: 36px; height: 36px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; flex-shrink: 0;
+}
+.fin-gasto-nombre { font-size: 13px; font-weight: 500; color: var(--text); }
+.fin-gasto-meta {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 11px; color: var(--text-sec); margin-top: 2px;
+}
+.fin-av-small {
+  width: 18px; height: 18px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 9px; font-weight: 500; flex-shrink: 0;
+}
+.fin-av {
+  width: 30px; height: 30px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 500; flex-shrink: 0;
+}
+.fin-badge {
+  font-size: 9px; font-weight: 500;
+  padding: 2px 7px; border-radius: 8px;
+  display: inline-block;
+}
+.fin-monto { font-size: 14px; font-weight: 500; color: var(--text); }
+.fin-monto-sub { font-size: 10px; color: var(--text-sec); margin-top: 1px; }
+.fin-row-actions {
+  display: flex; gap: 2px; opacity: 0;
+  transition: opacity 0.15s; margin-top: 3px;
+  justify-content: flex-end;
+}
+.fin-gasto-row:hover .fin-row-actions { opacity: 1; }
+.fin-act-btn {
+  background: none; border: none; cursor: pointer;
+  padding: 2px 4px; border-radius: 5px; font-size: 12px;
+}
+.fin-act-btn:hover { background: var(--border); }
+
+/* DEUDAS */
+.fin-deuda-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 9px 0; border-bottom: 0.5px solid var(--border);
+}
+.fin-deuda-row:last-child { border-bottom: none; }
+.fin-wa-btn {
+  background: #25D366; border: none; border-radius: 8px;
+  padding: 4px 10px; font-family: var(--fb);
+  font-size: 10px; font-weight: 500; color: #fff; cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* ADD GASTO BTN */
+.fin-add-btn {
+  width: 100%; padding: 10px;
+  border-radius: 12px;
+  border: 1.5px dashed var(--border-med);
+  background: transparent;
+  font-family: var(--fb); font-size: 12px;
+  color: var(--text-sec); cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  margin-bottom: 0.75rem;
+  transition: all 0.15s;
+}
+.fin-add-btn:hover { border-color: var(--hot); color: var(--hot); }
+
+/* RESUMEN POR CATEGORÍA */
+.fin-cat-resumen {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 8px; margin-bottom: 1rem;
+}
+.fin-cat-box {
+  background: var(--surface);
+  border-radius: 12px; padding: 0.75rem;
+  display: flex; align-items: center; gap: 8px;
+}
+.fin-cat-box-icon { font-size: 20px; }
+.fin-cat-box-label { font-size: 11px; color: var(--text-sec); }
+.fin-cat-box-val { font-size: 13px; font-weight: 500; color: var(--text); margin-top: 1px; }
+
+/* MODAL extras para gasto */
+.cat-opt {
+  padding: 8px 4px; border-radius: 10px;
+  border: 1.5px solid var(--border-med);
+  text-align: center; cursor: pointer; transition: all 0.15s;
+  background: transparent;
+}
+.cat-opt:hover { background: var(--surface); }
+.cat-opt.sel { border-width: 2px; }
+
+.split-chip {
+  display: flex; align-items: center; gap: 5px;
+  padding: 5px 10px; border-radius: 20px;
+  border: 1.5px solid var(--border-med);
+  cursor: pointer; font-size: 11px; font-weight: 500;
+  color: var(--text-sec); transition: all 0.15s;
+  background: transparent;
+}
+.split-chip.sel { color: var(--teal-d); }

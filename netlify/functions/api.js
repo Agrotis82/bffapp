@@ -2,6 +2,13 @@
 const { neon } = require('@neondatabase/serverless');
 const sql = neon(process.env.NETLIFY_DATABASE_URL);
 
+// Convierte Date object o string a "YYYY-MM-DD"
+function fmtDate(d) {
+  if (!d) return null;
+  if (d instanceof Date) return d.toISOString().slice(0, 10);
+  return String(d).slice(0, 10);
+}
+
 exports.handler = async (event) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
@@ -35,7 +42,7 @@ exports.handler = async (event) => {
       // normalizar fechas: "1984-03-15T00:00:00.000Z" → "1984-03-15"
       return ok(headers, rows.map(c => ({
         ...c,
-        bday: c.bday ? String(c.bday).slice(0, 10) : null,
+        bday: fmtDate(c.bday),
       })));
     }
 
@@ -59,8 +66,8 @@ exports.handler = async (event) => {
       const rows = await sql`SELECT * FROM eventos WHERE activo=true ORDER BY fecha_inicio NULLS LAST`;
       return ok(headers, rows.map(e => ({
         ...e,
-        fecha_inicio: e.fecha_inicio ? String(e.fecha_inicio).slice(0,10) : null,
-        fecha_fin:    e.fecha_fin    ? String(e.fecha_fin).slice(0,10)    : null,
+        fecha_inicio: fmtDate(e.fecha_inicio),
+        fecha_fin: fmtDate(e.fecha_fin),
       })));
     }
 
@@ -116,7 +123,7 @@ exports.handler = async (event) => {
       const id = +path.split('/')[2];
       const dias = await sql`SELECT * FROM itinerario_dias WHERE evento_id=${id} ORDER BY numero_dia`;
       for (const d of dias) {
-        d.fecha = d.fecha ? String(d.fecha).slice(0,10) : null;
+        d.fecha = fmtDate(d.fecha);
         d.actividades = await sql`SELECT * FROM actividades WHERE dia_id=${d.id} ORDER BY orden`;
       }
       return ok(headers, dias);

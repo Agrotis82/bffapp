@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta name="theme-color" content="#E24B4A">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="BFFapp">
+  <title>BFFapp 💅 Las Amigas</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="phone">
+
+    <!-- TOP BAR -->
+    <div class="topbar">
+      <div>
+        <div class="topbar-title">BFFapp 💅</div>
+        <div class="topbar-sub">Las Amigas · <span id="total-chicas">11</span> chicas</div>
+      </div>
+      <button class="wa-btn" onclick="shareWhatsApp('general')">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        Compartir
+      </button>
+    </div>
+
+    <!-- SCREENS -->
+    <div class="screens">
+
+      <!-- HOME -->
+      <div class="screen active" id="screen-home">
+        <div class="home-hero">
+          <div class="hero-tag">Próximo evento</div>
+          <div class="hero-name">Viaje a Río 🇧🇷</div>
+          <div class="hero-sub" id="home-hero-sub">26–29 Junio · Windsor Barra · 7 chicas</div>
+          <div class="hero-chips">
+            <span class="hchip" id="home-dias">✈️ Calculando...</span>
+            <span class="hchip">💰 43% cobrado</span>
+            <span class="hchip">📋 Itinerario listo</span>
+          </div>
+        </div>
+        <div class="av-row" id="home-avatars"></div>
+        <div class="quick-grid">
+          <div class="quick-card" style="background:var(--hot-l);" onclick="goTo('rio')">
+            <div class="quick-icon">🇧🇷</div>
+            <div class="quick-label" style="color:var(--hot-d);">Viaje Río</div>
+            <div class="quick-sub" style="color:var(--hot-d);">26–29 Jun · 4 días</div>
+          </div>
+          <div class="quick-card" style="background:var(--teal-l);" onclick="goTo('spa')">
+            <div class="quick-icon">🧖</div>
+            <div class="quick-label" style="color:var(--teal-d);">Spa Day</div>
+            <div class="quick-sub" style="color:var(--teal-d);">Encuesta abierta</div>
+          </div>
+          <div class="quick-card" style="background:var(--blue-l);" onclick="goTo('finanzas')">
+            <div class="quick-icon">💸</div>
+            <div class="quick-label" style="color:var(--blue-d);">Finanzas</div>
+            <div class="quick-sub" style="color:var(--blue-d);" id="home-finanzas-sub">$750 / $1750</div>
+          </div>
+          <div class="quick-card" style="background:var(--purple-l);" onclick="goTo('chicas')">
+            <div class="quick-icon">✅</div>
+            <div class="quick-label" style="color:var(--purple-d);">Las Chicas</div>
+            <div class="quick-sub" style="color:var(--purple-d);">7 de 11 van a Río</div>
+          </div>
+        </div>
+        <div class="section-title">Actividad reciente</div>
+        <div class="card card-sm">
+          <div class="activity-feed" id="feed-list"></div>
+        </div>
+        <div class="wa-share-card">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+          <div class="wa-share-text"><strong>Compartí la app con el grupo</strong><br>Mandá el resumen directo al chat de WhatsApp</div>
+          <button class="wa-share-btn" onclick="shareWhatsApp('resumen')">Enviar resumen</button>
+        </div>
+      </div>
+
+      <!-- RÍO -->
+      <div class="screen" id="screen-rio">
+        <div class="trip-header">
+          <div>
+            <div class="trip-tag">Viaje grupal · 7 chicas</div>
+            <div class="trip-name" id="r-destino">Rio de Janeiro</div>
+            <div class="trip-sub" id="r-fechas">26–29 Junio · Windsor Barra</div>
+          </div>
+          <button class="edit-pill" onclick="openRioModal()">✏️ Editar</button>
+        </div>
+        <div class="wa-share-card compact">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+          <div class="wa-share-text" style="font-size:11px;">Compartí el itinerario completo</div>
+          <button class="wa-share-btn" onclick="shareWhatsApp('itinerario')">Enviar ↗</button>
+        </div>
+        <div id="days-rio"></div>
+      </div>
+
+      <!-- FINANZAS -->
+      <div class="screen" id="screen-finanzas">
+        <div class="section-title" style="margin-top:0.5rem;">Finanzas · Río 2025</div>
+        <div class="stats-row">
+          <div class="stat-card"><div class="stat-val">$1.750</div><div class="stat-lbl">Total USD</div></div>
+          <div class="stat-card"><div class="stat-val" style="color:var(--teal);" id="fin-cobrado">$750</div><div class="stat-lbl">Cobrado</div></div>
+          <div class="stat-card"><div class="stat-val" style="color:var(--amber);" id="fin-pendiente">$1.000</div><div class="stat-lbl">Pendiente</div></div>
+        </div>
+        <div class="prog-bar"><div class="prog-fill" id="fin-prog" style="width:43%;"></div></div>
+        <div class="wa-share-card compact" style="margin-bottom:0.85rem;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+          <div class="wa-share-text" style="font-size:11px;">Recordá a las chicas que faltan pagar</div>
+          <button class="wa-share-btn" onclick="shareWhatsApp('pagos')">Recordatorio ↗</button>
+        </div>
+        <div class="filter-row">
+          <button class="filter-btn on" onclick="filterPagos('todos',this)">Todos</button>
+          <button class="filter-btn" onclick="filterPagos('pagado',this)">Pagaron</button>
+          <button class="filter-btn" onclick="filterPagos('pendiente',this)">Pendiente</button>
+        </div>
+        <div class="card card-sm"><div id="pagos-list"></div></div>
+        <div class="card card-sm" style="margin-top:0.5rem;">
+          <div class="info-row-sm">
+            <span class="info-lbl">Cuota por persona</span>
+            <span class="info-val">$250 USD</span>
+          </div>
+          <div class="info-row-sm">
+            <span class="info-lbl">Recaudadora</span>
+            <span class="badge badge-red">Luisa</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- SPA -->
+      <div class="screen" id="screen-spa">
+        <div class="trip-header" style="background:var(--teal);">
+          <div>
+            <div class="trip-tag">Evento grupal · 11 chicas</div>
+            <div class="trip-name">Spa Day</div>
+            <div class="trip-sub">Encuesta abierta · Abril 2025</div>
+          </div>
+          <span class="badge" style="background:rgba(255,255,255,0.2);color:#fff;">🗳️ Votando</span>
+        </div>
+        <div class="wa-share-card compact" style="background:var(--teal-l);border-color:var(--teal);margin-bottom:0.85rem;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+          <div class="wa-share-text" style="font-size:11px;color:var(--teal-d);">Invitá a las chicas a votar</div>
+          <button class="wa-share-btn" onclick="shareWhatsApp('spa')">Compartir ↗</button>
+        </div>
+        <div id="polls-spa"></div>
+      </div>
+
+      <!-- CHICAS -->
+      <div class="screen" id="screen-chicas">
+        <div class="trip-header" style="background:var(--purple);">
+          <div>
+            <div class="trip-tag">Grupo · BFFapp</div>
+            <div class="trip-name">Las Amigas 💅</div>
+            <div class="trip-sub" id="chicas-sub">11 chicas</div>
+          </div>
+        </div>
+        <div id="bday-banner"></div>
+        <div class="search-box">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-tertiary)" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" placeholder="Buscar..." oninput="filterChicas(this.value)" id="search-input">
+        </div>
+        <div id="chicas-list"></div>
+      </div>
+
+    </div><!-- /screens -->
+
+    <!-- BOTTOM NAV -->
+    <nav class="bottomnav">
+      <button class="nav-item active" id="nav-home" onclick="goTo('home')">
+        <div class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
+        <span class="nav-label">Inicio</span>
+      </button>
+      <button class="nav-item" id="nav-rio" onclick="goTo('rio')">
+        <div class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
+        <span class="nav-label">Río</span>
+      </button>
+      <button class="nav-item" id="nav-finanzas" onclick="goTo('finanzas')">
+        <div class="nav-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+          <div class="nav-badge"></div>
+        </div>
+        <span class="nav-label">Finanzas</span>
+      </button>
+      <button class="nav-item" id="nav-spa" onclick="goTo('spa')">
+        <div class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg></div>
+        <span class="nav-label">Spa Day</span>
+      </button>
+      <button class="nav-item" id="nav-chicas" onclick="goTo('chicas')">
+        <div class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></div>
+        <span class="nav-label">Chicas</span>
+      </button>
+    </nav>
+
+  </div><!-- /phone -->
+
+  <!-- MODAL -->
+  <div class="modal-overlay" id="modal" style="display:none;" onclick="if(event.target===this)closeModal()">
+    <div class="modal" id="modal-inner"></div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

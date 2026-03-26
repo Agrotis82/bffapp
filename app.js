@@ -93,17 +93,29 @@ function timeAgo(ts) {
   return `Hace ${Math.floor(diff/1440)}d`;
 }
 
+// Neon puede devolver "1984-03-15T00:00:00.000Z" o "1984-03-15" — normalizar siempre
+function cleanDate(bday) {
+  if (!bday) return null;
+  return String(bday).slice(0, 10); // tomar solo YYYY-MM-DD
+}
+
 function bdayLabel(bday) {
-  if (!bday) return '';
-  const d = new Date(bday + 'T12:00:00');
-  return `${d.getDate()} ${meses[d.getMonth()]}`;
+  const clean = cleanDate(bday);
+  if (!clean) return '';
+  const parts = clean.split('-');
+  if (parts.length < 3) return '';
+  return `${parseInt(parts[2])} ${meses[parseInt(parts[1]) - 1]}`;
 }
 
 function daysUntilBday(bday) {
-  if (!bday) return 999;
+  const clean = cleanDate(bday);
+  if (!clean) return 999;
+  const parts = clean.split('-');
+  if (parts.length < 3) return 999;
   const today = new Date();
-  const d = new Date(bday + 'T12:00:00');
-  const next = new Date(today.getFullYear(), d.getMonth(), d.getDate());
+  const month = parseInt(parts[1]) - 1;
+  const day   = parseInt(parts[2]);
+  const next  = new Date(today.getFullYear(), month, day);
   if (next < today) next.setFullYear(today.getFullYear() + 1);
   return Math.ceil((next - today) / (1000*60*60*24));
 }
@@ -1096,7 +1108,7 @@ function openEditChica(id) {
       </button>
     </div>
     <label class="field-label">Fecha de cumpleaños</label>
-    <input class="field-input" id="m-bday" type="date" value="${c.bday||''}">
+    <input class="field-input" id="m-bday" type="date" value="${cleanDate(c.bday)||''}">
     <div class="modal-btns">
       <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
       <button class="btn-save"   onclick="saveChicaDB(${c.id})">Guardar</button>

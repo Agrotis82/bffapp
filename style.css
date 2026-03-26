@@ -483,7 +483,6 @@ html, body { height: 100%; font-family: var(--fb); background: var(--bg); color:
 .feed-swipe-bg:hover { background:var(--hot-d); }
 
 /* Gasto solo registro */
-.fin-gasto-row.solo-reg { background:var(--purple-l); }
 .fin-gasto-row.solo-reg:hover { background:var(--purple-l); }
 .fin-hero{background:var(--hot);border-radius:18px;padding:1.1rem 1.25rem;margin-bottom:1rem;position:relative;overflow:hidden;}
 .fin-stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:0.75rem;}

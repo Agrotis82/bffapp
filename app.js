@@ -96,32 +96,16 @@ function confirmDeleteFeed(id) {
     </div>`);
 }
 async function deleteFeedItem(id) {
-  try { await del(\`/feed/\${id}\`); } catch(e) { console.warn(e); }
+  try { await del(`/feed/${id}`); } catch(e) { console.warn(e); }
   closeModal();
-  // remover del DOM sin recargar
-  const el = document.getElementById(\`feed-\${id}\`);
-  if (el) { el.style.transition='all 0.3s'; el.style.opacity='0'; el.style.height='0'; setTimeout(()=>el.remove(),300); }
-}
-function initFeedSwipe() {
-  document.querySelectorAll('.feed-item-inner').forEach(inner => {
-    let startX = 0, currentX = 0, dragging = false;
-    const id = inner.id.replace('feed-inner-','');
-    inner.addEventListener('touchstart', e => { startX = e.touches[0].clientX; dragging = true; }, {passive:true});
-    inner.addEventListener('touchmove', e => {
-      if (!dragging) return;
-      currentX = e.touches[0].clientX - startX;
-      if (currentX < 0) inner.style.transform = \`translateX(\${Math.max(currentX,-80)}px)\`;
-    }, {passive:true});
-    inner.addEventListener('touchend', () => {
-      dragging = false;
-      if (currentX < -60) {
-        inner.style.transform = 'translateX(-80px)';
-      } else {
-        inner.style.transform = 'translateX(0)';
-      }
-      currentX = 0;
-    });
-  });
+  const el = document.getElementById(`feed-${id}`);
+  if (el) {
+    el.style.transition = 'opacity 0.3s, max-height 0.3s';
+    el.style.overflow = 'hidden';
+    el.style.maxHeight = el.offsetHeight + 'px';
+    setTimeout(() => { el.style.opacity = '0'; el.style.maxHeight = '0'; }, 10);
+    setTimeout(() => el.remove(), 320);
+  }
 }
 
 function timeAgo(ts) {
@@ -233,19 +217,15 @@ async function renderHome() {
     if (feedEl) {
       feedEl.innerHTML = feed.length
         ? feed.map(f => `
-            <div class="feed-item" id="feed-${f.id}" style="position:relative;overflow:hidden;touch-action:pan-y;">
-              <div class="feed-swipe-bg" onclick="confirmDeleteFeed(${f.id})">🗑️ Eliminar</div>
-              <div class="feed-item-inner" id="feed-inner-${f.id}">
-                <div class="feed-av" style="background:${f.bg_color||'#eee'};color:${f.color||'#333'};">${f.apodo||'?'}</div>
-                <div style="flex:1;">
-                  <div class="feed-text">${f.texto}</div>
-                  <div class="feed-time">${timeAgo(f.created_at)}</div>
-                </div>
+            <div class="feed-item" id="feed-${f.id}">
+              <div class="feed-av" style="background:${f.bg_color||'#eee'};color:${f.color||'#333'};">${f.apodo||'?'}</div>
+              <div style="flex:1;">
+                <div class="feed-text">${f.texto}</div>
+                <div class="feed-time">${timeAgo(f.created_at)}</div>
               </div>
+              <button onclick="confirmDeleteFeed(${f.id})" style="background:none;border:none;cursor:pointer;color:var(--text-ter);font-size:16px;padding:2px 4px;border-radius:6px;flex-shrink:0;line-height:1;" title="Eliminar">×</button>
             </div>`).join('')
         : '<div style="font-size:12px;color:var(--text-ter);padding:8px 0;">Sin actividad reciente</div>';
-      // init swipe handlers after render
-      setTimeout(initFeedSwipe, 100);
     }
   } catch(e) { console.warn('Feed:', e); }
 }
@@ -652,12 +632,12 @@ function confirmDeleteAct(actId, eventoId) {
     <div class="modal-btns">
       <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
       <button class="btn-danger" style="flex:2;" onclick="deleteActDB(${actId},${eventoId})">Sí, eliminar</button>
-    </div>\`);
+    </div>`);
 }
 async function deleteActDB(actId, eventoId) {
-  await del(\`/actividades/\${actId}\`);
+  await del(`/actividades/${actId}`);
   closeModal();
-  days = await get(\`/itinerario/\${eventoId}\`);
+  days = await get(`/itinerario/${eventoId}`);
   renderDays(eventoId);
 }
 
@@ -988,7 +968,7 @@ function confirmDeleteGasto(id) {
     </div>`);
 }
 async function deleteGastoAPI(id) {
-  await del(\`/gastos/\${id}\`);
+  await del(`/gastos/${id}`);
   closeModal(); await refreshFinanzas();
 }
 

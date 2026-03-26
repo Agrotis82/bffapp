@@ -203,8 +203,8 @@ exports.handler = async (event) => {
       const eventoId = +path.split('/')[2];
       const moneda   = event.queryStringParameters?.moneda || null;
       const gastos   = moneda
-        ? await sql`SELECT g.*,c.nombre AS pagado_por_nombre,c.apodo AS pagado_por_apodo,c.color AS pagado_por_color,c.bg_color AS pagado_por_bg FROM gastos g JOIN chicas c ON c.id=g.pagado_por WHERE g.evento_id=${eventoId} AND g.moneda=${moneda} ORDER BY g.created_at DESC`
-        : await sql`SELECT g.*,c.nombre AS pagado_por_nombre,c.apodo AS pagado_por_apodo,c.color AS pagado_por_color,c.bg_color AS pagado_por_bg FROM gastos g JOIN chicas c ON c.id=g.pagado_por WHERE g.evento_id=${eventoId} ORDER BY g.created_at DESC`;
+        ? await sql`SELECT g.*,fmtDate(g.fecha_registro) AS fecha_registro,c.nombre AS pagado_por_nombre,c.apodo AS pagado_por_apodo,c.color AS pagado_por_color,c.bg_color AS pagado_por_bg FROM gastos g JOIN chicas c ON c.id=g.pagado_por WHERE g.evento_id=${eventoId} AND g.moneda=${moneda} ORDER BY g.fecha_registro DESC,g.created_at DESC`
+        : await sql`SELECT g.*,c.nombre AS pagado_por_nombre,c.apodo AS pagado_por_apodo,c.color AS pagado_por_color,c.bg_color AS pagado_por_bg FROM gastos g JOIN chicas c ON c.id=g.pagado_por WHERE g.evento_id=${eventoId} ORDER BY g.fecha_registro DESC,g.created_at DESC`;
       for (const g of gastos) {
         g.participantes = await sql`
           SELECT pg.*,c.nombre,c.apodo,c.color,c.bg_color
@@ -222,17 +222,21 @@ exports.handler = async (event) => {
     }
 
     if (path === '/gastos' && method === 'POST') {
-      const { evento_id, nombre, monto, moneda, categoria, pagado_por, participantes, notas } = body;
+      const { evento_id, nombre, monto, moneda, categoria, pagado_por, participantes, notas, fecha_registro, solo_registro } = body;
+      const fechaReg = fecha_registro ? String(fecha_registro).slice(0,10) : null;
       const [gasto] = await sql`
-        INSERT INTO gastos (evento_id,nombre,monto,moneda,categoria,pagado_por,notas)
-        VALUES (${evento_id},${nombre},${monto},${moneda||'USD'},${categoria||'otro'},${pagado_por},${notas||null})
+        INSERT INTO gastos (evento_id,nombre,monto,moneda,categoria,pagado_por,notas,fecha_registro,solo_registro)
+        VALUES (${evento_id},${nombre},${monto},${moneda||'USD'},${categoria||'otro'},${pagado_por},${notas||null},${fechaReg},${solo_registro||false})
         RETURNING *`;
-      const montoPorPersona = parseFloat(monto) / participantes.length;
-      for (const chica_id of participantes) {
-        await sql`
-          INSERT INTO participantes_gasto (gasto_id,chica_id,monto_debe)
-          VALUES (${gasto.id},${chica_id},${montoPorPersona})
-          ON CONFLICT DO NOTHING`;
+      // solo insertar participantes si NO es solo_registro
+      if (!solo_registro && participantes && participantes.length > 0) {
+        const montoPorPersona = parseFloat(monto) / participantes.length;
+        for (const chica_id of participantes) {
+          await sql`
+            INSERT INTO participantes_gasto (gasto_id,chica_id,monto_debe)
+            VALUES (${gasto.id},${chica_id},${montoPorPersona})
+            ON CONFLICT DO NOTHING`;
+        }
       }
       const [c] = await sql`SELECT nombre FROM chicas WHERE id=${pagado_por}`;
       await logFeed(sql, pagado_por, 'gasto', `${c.nombre} registró: ${nombre} (${moneda||'USD'} ${monto})`, evento_id);
@@ -241,14 +245,17 @@ exports.handler = async (event) => {
 
     if (path.match(/^\/gastos\/(\d+)$/) && method === 'PUT') {
       const id = +path.split('/')[2];
-      const { nombre, monto, moneda, categoria, pagado_por, participantes, notas } = body;
+      const { nombre, monto, moneda, categoria, pagado_por, participantes, notas, fecha_registro, solo_registro } = body;
+      const fechaReg = fecha_registro ? String(fecha_registro).slice(0,10) : null;
       await sql`
         UPDATE gastos
         SET nombre=${nombre},monto=${monto},moneda=${moneda||'USD'},
-            categoria=${categoria||'otro'},pagado_por=${pagado_por},notas=${notas||null}
+            categoria=${categoria||'otro'},pagado_por=${pagado_por},notas=${notas||null},
+            fecha_registro=${fechaReg},solo_registro=${solo_registro||false}
         WHERE id=${id}`;
-      if (participantes) {
-        await sql`DELETE FROM participantes_gasto WHERE gasto_id=${id}`;
+      // reinsertar participantes solo si no es solo_registro
+      await sql`DELETE FROM participantes_gasto WHERE gasto_id=${id}`;
+      if (!solo_registro && participantes && participantes.length > 0) {
         const parte = parseFloat(monto) / participantes.length;
         for (const chica_id of participantes) {
           await sql`INSERT INTO participantes_gasto (gasto_id,chica_id,monto_debe) VALUES (${id},${chica_id},${parte})`;
@@ -284,7 +291,7 @@ exports.handler = async (event) => {
           ARRAY_AGG(pg.chica_id) AS participantes
         FROM gastos g
         JOIN participantes_gasto pg ON pg.gasto_id=g.id AND pg.pagado=false
-        WHERE g.evento_id=${eventoId} AND g.moneda=${moneda} AND g.saldado=false
+        WHERE g.evento_id=${eventoId} AND g.moneda=${moneda} AND g.saldado=false AND g.solo_registro=false
         GROUP BY g.id`;
 
       const balance = {};
@@ -376,6 +383,12 @@ exports.handler = async (event) => {
         SELECT f.*,c.apodo,c.color,c.bg_color
         FROM actividad_feed f LEFT JOIN chicas c ON c.id=f.chica_id
         ORDER BY f.created_at DESC LIMIT 20`);
+    }
+
+    // ── FEED DELETE ────────────────────────────────────
+    if (path.match(/^\/feed\/(\d+)$/) && method === 'DELETE') {
+      await sql`DELETE FROM actividad_feed WHERE id=${+path.split('/')[2]}`;
+      return ok(headers, { success: true });
     }
 
     // ── MISIONES ───────────────────────────────────────

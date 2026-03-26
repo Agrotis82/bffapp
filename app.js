@@ -85,6 +85,45 @@ function formatFecha(f) {
   return `${d.getDate()} ${meses[d.getMonth()]} ${d.getFullYear()}`;
 }
 
+// ── FEED DELETE ──
+function confirmDeleteFeed(id) {
+  openModal(`
+    <div class="modal-title">¿Eliminar notificación?</div>
+    <div style="font-size:13px;color:var(--text-sec);margin-bottom:1rem;">Esta acción no se puede deshacer.</div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+      <button class="btn-danger" style="flex:2;" onclick="deleteFeedItem(${id})">Sí, eliminar</button>
+    </div>`);
+}
+async function deleteFeedItem(id) {
+  try { await del(\`/feed/\${id}\`); } catch(e) { console.warn(e); }
+  closeModal();
+  // remover del DOM sin recargar
+  const el = document.getElementById(\`feed-\${id}\`);
+  if (el) { el.style.transition='all 0.3s'; el.style.opacity='0'; el.style.height='0'; setTimeout(()=>el.remove(),300); }
+}
+function initFeedSwipe() {
+  document.querySelectorAll('.feed-item-inner').forEach(inner => {
+    let startX = 0, currentX = 0, dragging = false;
+    const id = inner.id.replace('feed-inner-','');
+    inner.addEventListener('touchstart', e => { startX = e.touches[0].clientX; dragging = true; }, {passive:true});
+    inner.addEventListener('touchmove', e => {
+      if (!dragging) return;
+      currentX = e.touches[0].clientX - startX;
+      if (currentX < 0) inner.style.transform = \`translateX(\${Math.max(currentX,-80)}px)\`;
+    }, {passive:true});
+    inner.addEventListener('touchend', () => {
+      dragging = false;
+      if (currentX < -60) {
+        inner.style.transform = 'translateX(-80px)';
+      } else {
+        inner.style.transform = 'translateX(0)';
+      }
+      currentX = 0;
+    });
+  });
+}
+
 function timeAgo(ts) {
   const diff = Math.floor((Date.now() - new Date(ts)) / 60000);
   if (diff < 1)    return 'Ahora';
@@ -194,14 +233,19 @@ async function renderHome() {
     if (feedEl) {
       feedEl.innerHTML = feed.length
         ? feed.map(f => `
-            <div class="feed-item">
-              <div class="feed-av" style="background:${f.bg_color||'#eee'};color:${f.color||'#333'};">${f.apodo||'?'}</div>
-              <div>
-                <div class="feed-text">${f.texto}</div>
-                <div class="feed-time">${timeAgo(f.created_at)}</div>
+            <div class="feed-item" id="feed-${f.id}" style="position:relative;overflow:hidden;touch-action:pan-y;">
+              <div class="feed-swipe-bg" onclick="confirmDeleteFeed(${f.id})">🗑️ Eliminar</div>
+              <div class="feed-item-inner" id="feed-inner-${f.id}">
+                <div class="feed-av" style="background:${f.bg_color||'#eee'};color:${f.color||'#333'};">${f.apodo||'?'}</div>
+                <div style="flex:1;">
+                  <div class="feed-text">${f.texto}</div>
+                  <div class="feed-time">${timeAgo(f.created_at)}</div>
+                </div>
               </div>
             </div>`).join('')
         : '<div style="font-size:12px;color:var(--text-ter);padding:8px 0;">Sin actividad reciente</div>';
+      // init swipe handlers after render
+      setTimeout(initFeedSwipe, 100);
     }
   } catch(e) { console.warn('Feed:', e); }
 }
@@ -601,10 +645,19 @@ async function saveActDB(dayId, actId, eventoId) {
   renderDays(eventoId);
 }
 
+function confirmDeleteAct(actId, eventoId) {
+  openModal(`
+    <div class="modal-title">¿Eliminar actividad?</div>
+    <div style="font-size:13px;color:var(--text-sec);margin-bottom:1rem;">Esta acción no se puede deshacer.</div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+      <button class="btn-danger" style="flex:2;" onclick="deleteActDB(${actId},${eventoId})">Sí, eliminar</button>
+    </div>\`);
+}
 async function deleteActDB(actId, eventoId) {
-  await del(`/actividades/${actId}`);
+  await del(\`/actividades/\${actId}\`);
   closeModal();
-  days = await get(`/itinerario/${eventoId}`);
+  days = await get(\`/itinerario/\${eventoId}\`);
   renderDays(eventoId);
 }
 
@@ -676,7 +729,7 @@ function renderFinGastos() {
       `<div style="width:18px;height:18px;border-radius:50%;background:${p.bg_color};color:${p.color};font-size:8px;font-weight:500;display:inline-flex;align-items:center;justify-content:center;border:1.5px solid var(--card-bg);margin-left:-4px;">${(p.apodo||'?').slice(0,2)}</div>`
     ).join('');
     return `
-      <div class="fin-gasto-row${g.saldado?' saldado':''}">
+      <div class="fin-gasto-row${g.saldado?' saldado':''}${g.solo_registro?' solo-reg':''}">
         <div class="fin-cat-icon" style="background:${cat.bg};">${cat.icon}</div>
         <div style="flex:1;min-width:0;">
           <div class="fin-gasto-nombre">${g.nombre}</div>
@@ -687,9 +740,12 @@ function renderFinGastos() {
           </div>
           <div style="display:flex;gap:4px;margin-top:3px;flex-wrap:wrap;">
             <span class="fin-badge" style="background:${cat.bg};color:${cat.color};">${cat.label}</span>
-            ${g.saldado
-              ? '<span class="fin-badge" style="background:var(--teal-l);color:var(--teal-d);">✓ Saldado</span>'
-              : '<span class="fin-badge" style="background:var(--amber-l);color:var(--amber-d);">Pendiente</span>'}
+            ${g.solo_registro
+              ? '<span class="fin-badge" style="background:var(--purple-l);color:var(--purple-d);">📌 Solo registro</span>'
+              : g.saldado
+                ? '<span class="fin-badge" style="background:var(--teal-l);color:var(--teal-d);">✓ Saldado</span>'
+                : '<span class="fin-badge" style="background:var(--amber-l);color:var(--amber-d);">Pendiente</span>'}
+            ${g.fecha_registro ? `<span class="fin-badge" style="background:var(--surface);color:var(--text-ter);">📅 ${g.fecha_registro}</span>` : ''}
           </div>
         </div>
         <div style="text-align:right;flex-shrink:0;">
@@ -698,7 +754,7 @@ function renderFinGastos() {
           <div class="fin-row-actions">
             <button class="fin-act-btn" onclick="openEditGasto(${g.id})">✏️</button>
             <button class="fin-act-btn" onclick="toggleSaldado(${g.id},${g.saldado})">${g.saldado?'↩':'✓'}</button>
-            <button class="fin-act-btn" onclick="deleteGastoAPI(${g.id})">🗑</button>
+            <button class="fin-act-btn" onclick="confirmDeleteGasto(${g.id})">🗑</button>
           </div>
         </div>
       </div>`;
@@ -830,10 +886,25 @@ function _openGastoModal(prefill) {
       }).join('')}
     </div>
     <div id="fg-preview" style="font-size:11px;color:var(--text-sec);margin-bottom:10px;"></div>
-    <label class="field-label">Notas (opcional)</label>
-    <input class="field-input" id="fg-notas" placeholder="Detalles..." value="${prefill?.notas||''}">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+      <div>
+        <label class="field-label">Fecha del gasto</label>
+        <input class="field-input" id="fg-fecha" type="date" value="${prefill?.fecha_registro||new Date().toISOString().slice(0,10)}" style="margin-bottom:0;">
+      </div>
+      <div>
+        <label class="field-label">Notas (opcional)</label>
+        <input class="field-input" id="fg-notas" placeholder="Detalles..." value="${prefill?.notas||''}" style="margin-bottom:0;">
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface);border-radius:12px;padding:10px 12px;margin-bottom:10px;">
+      <div>
+        <div style="font-size:13px;color:var(--text);font-weight:500;">📌 Solo registro</div>
+        <div style="font-size:11px;color:var(--text-sec);margin-top:1px;">No divide entre participantes</div>
+      </div>
+      <button class="toggle ${prefill?.solo_registro?'on':''}" id="fg-solo" onclick="this.classList.toggle('on');finUpdatePreview()"></button>
+    </div>
     <div class="modal-btns">
-      ${prefill ? `<button class="btn-danger" onclick="deleteGastoAPI(${prefill.id})">Eliminar</button>` : '<button class="btn-cancel" onclick="closeModal()">Cancelar</button>'}
+      ${prefill ? `<button class="btn-danger" onclick="confirmDeleteGasto(${prefill.id})">Eliminar</button>` : '<button class="btn-cancel" onclick="closeModal()">Cancelar</button>'}
       <button class="btn-save" onclick="saveGastoAPI()">Guardar</button>
     </div>`);
   finUpdatePreview();
@@ -866,13 +937,23 @@ function finToggleSplit(id) {
   finUpdatePreview();
 }
 function finUpdatePreview() {
-  const monto = parseFloat(document.getElementById('fg-monto')?.value||0);
-  const n     = finState.selSplit.length;
-  const prev  = document.getElementById('fg-preview');
+  const monto     = parseFloat(document.getElementById('fg-monto')?.value||0);
+  const n         = finState.selSplit.length;
+  const prev      = document.getElementById('fg-preview');
+  const soloReg   = document.getElementById('fg-solo')?.classList.contains('on');
+  // toggle visibility of split section
+  const splitSec  = document.getElementById('fg-split-section');
+  if (splitSec) splitSec.style.display = soloReg ? 'none' : '';
   if (!prev) return;
-  prev.textContent = monto > 0
-    ? `${fmt(monto/n, finState.selMon)} por persona · ${n} participante${n!==1?'s':''}`
-    : `${n} participante${n!==1?'s':''}`;
+  if (soloReg) {
+    prev.textContent = '📌 Solo registro — no se divide entre nadie';
+    prev.style.color = 'var(--amber-d)';
+  } else {
+    prev.style.color = '';
+    prev.textContent = monto > 0
+      ? `${fmt(monto/n, finState.selMon)} por persona · ${n} participante${n!==1?'s':''}`
+      : `${n} participante${n!==1?'s':''}`;
+  }
 }
 
 async function saveGastoAPI() {
@@ -880,22 +961,34 @@ async function saveGastoAPI() {
   const monto     = parseFloat(document.getElementById('fg-monto').value);
   const pagadoPor = parseInt(document.getElementById('fg-pagadopor').value);
   if (!nombre || !monto || monto<=0 || !finState.selSplit.length) return;
+  const soloReg = document.getElementById('fg-solo')?.classList.contains('on') || false;
   const payload = {
-    evento_id:     finState.eventoId,
+    evento_id:       finState.eventoId,
     nombre, monto,
-    moneda:        finState.selMon,
-    categoria:     finState.selCat,
-    pagado_por:    pagadoPor,
-    participantes: finState.selSplit,
-    notas:         document.getElementById('fg-notas').value.trim(),
+    moneda:          finState.selMon,
+    categoria:       finState.selCat,
+    pagado_por:      pagadoPor,
+    participantes:   soloReg ? [] : finState.selSplit,
+    notas:           document.getElementById('fg-notas').value.trim(),
+    fecha_registro:  document.getElementById('fg-fecha')?.value || null,
+    solo_registro:   soloReg,
   };
   if (finState.editingGasto) await put(`/gastos/${finState.editingGasto.id}`, payload);
   else                        await post('/gastos', payload);
   closeModal(); await refreshFinanzas();
 }
 
+function confirmDeleteGasto(id) {
+  openModal(`
+    <div class="modal-title">¿Eliminar gasto?</div>
+    <div style="font-size:13px;color:var(--text-sec);margin-bottom:1rem;">Esta acción eliminará el gasto y no se puede deshacer.</div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+      <button class="btn-danger" style="flex:2;" onclick="deleteGastoAPI(${id})">Sí, eliminar</button>
+    </div>`);
+}
 async function deleteGastoAPI(id) {
-  await del(`/gastos/${id}`);
+  await del(\`/gastos/\${id}\`);
   closeModal(); await refreshFinanzas();
 }
 

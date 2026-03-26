@@ -5,12 +5,3 @@
     "@neondatabase/serverless": "^0.9.0"
   }
 }
-```
-
-5. Click **Commit changes**
-
----
-
-Netlify va a redesployar automáticamente. En ~1 minuto probá:
-```
-https://bffapp-lasamigas.netlify.app/api/health

@@ -816,7 +816,8 @@ function openEditGasto(id) {
   const g = finState.gastos.find(g=>g.id===id);
   if (!g) return;
   finState.editingGasto = g;
-  finState.selCats  = g.categoria ? (Array.isArray(g.categoria) ? g.categoria : [g.categoria]) : ['otro'];
+  // categoria comes as 'alojamiento,transporte' string — always split by comma
+  finState.selCats  = g.categoria ? g.categoria.split(',').map(s=>s.trim()).filter(Boolean) : ['otro'];
   finState.selSplit = (g.participantes||[]).map(p=>p.chica_id);
   finState.selMon   = g.moneda;
   _openGastoModal(g);
@@ -1232,7 +1233,32 @@ function shareWhatsApp(type, eventoId) {
     general:    `👯‍♀️ *BFFapp - Las Amigas*\n\n📍 Planes activos: ${eventos.length}\n✈️ Próximo: ${eventos[0]?.nombre||'–'}\n\n¡Abrí la app para ver todos los detalles! 💅`,
     resumen:    `👯‍♀️ *Resumen - Las Amigas*\n\n${eventos.map(e=>`${TIPOS[e.tipo]?.icon||'📍'} ${e.nombre} · ${e.fecha_inicio?formatFecha(e.fecha_inicio):'Fecha TBD'}`).join('\n')}\n\n💌 ¡Revisá la app! 🙏`,
     itinerario: `✈️ *Itinerario ${rio?.nombre||'Viaje'}*\n${rio?.fecha_inicio?formatFecha(rio.fecha_inicio):''}\n\n`+days.map(d=>`📅 *Día ${d.numero_dia} - ${d.titulo}*\n`+(d.actividades||[]).map(a=>`• ${a.nombre}`).join('\n')).join('\n\n'),
-    pagos:      `💸 *Recordatorio de pagos*\n\n${finState.deudas.map(t=>`• ${t.de_chica?.nombre} le debe a ${t.para_chica?.nombre}: ${fmt(t.monto,finState.moneda)}`).join('\n')||'Todo saldado ✓'}\n\n¡Recuerden transferir! 🙏`,
+    pagos: (() => {
+      const deudas = finState.deudas;
+      const gastos = finState.gastos;
+      const mon    = finState.moneda;
+      let msg = `💸 *Resumen de gastos - BFFapp*\n`;
+      msg += `Moneda: ${mon}\n\n`;
+      if (gastos.length) {
+        msg += `📋 *Gastos registrados:*\n`;
+        gastos.filter(g=>g.moneda===mon).forEach(g => {
+          msg += `• ${g.nombre}: ${fmt(g.monto,mon)}`;
+          if (g.solo_registro) msg += ` _(solo registro)_`;
+          msg += `\n`;
+        });
+        msg += `\n`;
+      }
+      if (deudas.length) {
+        msg += `💸 *Quién le debe a quién:*\n`;
+        deudas.forEach(t => {
+          msg += `• ${t.de_chica?.nombre} → ${t.para_chica?.nombre}: ${fmt(t.monto,mon)}\n`;
+        });
+      } else {
+        msg += `✅ ¡Todo saldado! No hay deudas pendientes.\n`;
+      }
+      msg += `\n¡Revisá la app para más detalles! 💅`;
+      return msg;
+    })(),
     spa:        `🧖‍♀️ *¡Encuesta Spa Day abierta!*\n¡Chicas, voten en la app! 🗳️💅`,
   };
   if (type==='evento' && eventoId) {

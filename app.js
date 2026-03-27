@@ -714,7 +714,10 @@ function renderFinGastos() {
     ).join('');
     return `
       <div class="fin-gasto-row${g.saldado?' saldado':''}${g.solo_registro?' solo-reg':''}">
-        <div class="fin-cat-icon" style="background:${cat.bg};">${cat.icon}</div>
+        <div class="fin-cat-icon" style="background:${cat.bg};position:relative;">
+          ${cat.icon}
+          ${g.saldado ? '<div style="position:absolute;inset:0;background:var(--teal);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;">✓</div>' : ''}
+        </div>
         <div style="flex:1;min-width:0;">
           <div class="fin-gasto-nombre">${g.nombre}</div>
           <div class="fin-gasto-meta">
@@ -750,8 +753,9 @@ function renderFinDeudas() {
   if (!list) return;
   const { deudas, moneda } = finState;
 
-  // Check if ALL gastos compartidos are saldado
-  const compartidos = (finState.gastos||[]).filter(g => !g.solo_registro && g.moneda===moneda);
+  // Check if ALL gastos compartidos are saldado (use gastosAll for full picture)
+  const allGastos = finState.gastosAll || finState.gastos || [];
+  const compartidos = allGastos.filter(g => !g.solo_registro && g.moneda===moneda);
   const todosSaldados = compartidos.length > 0 && compartidos.every(g => g.saldado);
 
   if (!deudas.length) {
@@ -807,10 +811,11 @@ async function confirmarSaldarDeuda(deNombre, paraNombre, monto, moneda, gastoId
 
 async function saldarDeudaCompleta(gastoIds) {
   closeModal();
-  for (const id of gastoIds) {
-    await put(`/gastos/${id}/saldar`, {});
-  }
-  await refreshFinanzas();
+  // Mark all shared gastos as saldado
+  await Promise.all(gastoIds.map(id => put(`/gastos/${id}/saldar`, {})));
+  // Full refresh — reload from API and update all screens
+  finState.gastosAll = null; // force fresh fetch
+  await Promise.all([refreshFinanzas(), renderHome()]);
 }
 
 function renderFinBalance() {

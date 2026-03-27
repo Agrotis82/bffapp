@@ -785,7 +785,7 @@ function renderFinDeudas() {
         </div>
         <div style="display:flex;gap:6px;width:100%;padding-top:4px;">
           <button class="fin-wa-btn" style="flex:1;" onclick="waDeuda('${de.nombre}','${para.nombre}',${t.monto},'${moneda}')">📱 Recordatorio</button>
-          <button class="fin-wa-btn" style="flex:1;background:var(--teal);" onclick="confirmarSaldarDeuda('${de.nombre}','${para.nombre}',${t.monto},'${moneda}',${JSON.stringify(finState.gastos.filter(g=>!g.solo_registro&&!g.saldado&&g.moneda===moneda).map(g=>g.id))})">✓ Saldar</button>
+          <button class="fin-wa-btn" style="flex:1;background:var(--teal);" onclick="confirmarSaldarDeuda('${de.nombre}','${para.nombre}',${t.monto},'${moneda}',${t.de})">✓ Saldar</button>
         </div>
       </div>`;
   }).join('');

@@ -2,6 +2,7 @@
   "name": "bffapp",
   "version": "1.0.0",
   "dependencies": {
-    "@neondatabase/serverless": "^0.9.0"
+    "@neondatabase/serverless": "^0.9.0",
+    "@netlify/blobs": "^8.0.0"
   }
 }

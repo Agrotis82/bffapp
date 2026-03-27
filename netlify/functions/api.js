@@ -453,30 +453,108 @@ exports.handler = async (event) => {
       return ok(headers, { success: true });
     }
 
-    // ── MISIONES ───────────────────────────────────────
+    // ── ENCUESTAS POR EVENTO (cualquier tipo) ──────────
+    // encuestas ya soporta evento_id — rutas existentes sirven
+
+    // ── REGALO / MISIONES SECRETAS ─────────────────────
     if (path === '/misiones' && method === 'GET') {
-      return ok(headers, await sql`
-        SELECT m.*,COALESCE(SUM(a.monto),0) AS recaudado,COUNT(a.id)::int AS aportantes
+      const misiones = await sql`
+        SELECT m.*,
+          COALESCE(SUM(a.monto),0) AS recaudado,
+          COUNT(DISTINCT a.chica_id)::int AS aportantes
         FROM misiones_secretas m
         LEFT JOIN aportes_mision a ON a.mision_id=m.id AND a.pagado=true
-        WHERE m.activa=true GROUP BY m.id ORDER BY m.created_at DESC`);
+        WHERE m.activa=true GROUP BY m.id ORDER BY m.created_at DESC`;
+
+      for (const m of misiones) {
+        // opciones de regalo con votos
+        m.opciones = await sql`
+          SELECT o.*, COUNT(v.id)::int AS votos
+          FROM opciones_regalo o
+          LEFT JOIN votos_regalo v ON v.opcion_id=o.id
+          WHERE o.mision_id=${m.id}
+          GROUP BY o.id ORDER BY o.orden, o.id`;
+        // aportes por chica
+        m.aportes = await sql`
+          SELECT a.*, c.nombre, c.apodo, c.color, c.bg_color
+          FROM aportes_mision a
+          JOIN chicas c ON c.id=a.chica_id
+          WHERE a.mision_id=${m.id}
+          ORDER BY c.nombre`;
+      }
+      return ok(headers, misiones);
     }
 
     if (path === '/misiones' && method === 'POST') {
-      const { nombre, descripcion, festejada_id, monto_objetivo, fecha_limite } = body;
+      const { nombre, descripcion, festejada_id, festejada_nombre, monto_objetivo, fecha_limite } = body;
       const [row] = await sql`
-        INSERT INTO misiones_secretas (nombre,descripcion,festejada_id,monto_objetivo,fecha_limite)
-        VALUES (${nombre},${descripcion||null},${festejada_id||null},${monto_objetivo||null},${fecha_limite||null})
+        INSERT INTO misiones_secretas (nombre,descripcion,festejada_id,festejada_nombre,monto_objetivo,fecha_limite)
+        VALUES (${nombre},${descripcion||null},${festejada_id||null},${festejada_nombre||null},${monto_objetivo||null},${fecha_limite||null})
         RETURNING *`;
       return ok(headers, row);
     }
 
+    if (path.match(/^\/misiones\/(\d+)$/) && method === 'PUT') {
+      const id = +path.split('/')[2];
+      const { nombre, descripcion, festejada_nombre, monto_objetivo, fecha_limite } = body;
+      await sql`UPDATE misiones_secretas SET nombre=${nombre},descripcion=${descripcion||null},festejada_nombre=${festejada_nombre||null},monto_objetivo=${monto_objetivo||null},fecha_limite=${fecha_limite||null} WHERE id=${id}`;
+      return ok(headers, { success: true });
+    }
+
+    if (path.match(/^\/misiones\/(\d+)$/) && method === 'DELETE') {
+      await sql`UPDATE misiones_secretas SET activa=false WHERE id=${+path.split('/')[2]}`;
+      return ok(headers, { success: true });
+    }
+
+    // Aportes
     if (path === '/misiones/aporte' && method === 'POST') {
       const { mision_id, chica_id, monto } = body;
       await sql`
         INSERT INTO aportes_mision (mision_id,chica_id,monto,pagado)
         VALUES (${mision_id},${chica_id},${monto},true)
         ON CONFLICT (mision_id,chica_id) DO UPDATE SET monto=${monto},pagado=true,updated_at=NOW()`;
+      return ok(headers, { success: true });
+    }
+
+    if (path === '/misiones/aporte/delete' && method === 'POST') {
+      const { mision_id, chica_id } = body;
+      await sql`DELETE FROM aportes_mision WHERE mision_id=${mision_id} AND chica_id=${chica_id}`;
+      return ok(headers, { success: true });
+    }
+
+    // Opciones de regalo
+    if (path === '/misiones/opcion' && method === 'POST') {
+      const { mision_id, nombre, descripcion, precio_est, link } = body;
+      const [max] = await sql`SELECT COALESCE(MAX(orden),0)+1 AS next FROM opciones_regalo WHERE mision_id=${mision_id}`;
+      const [row] = await sql`
+        INSERT INTO opciones_regalo (mision_id,nombre,descripcion,precio_est,link,orden)
+        VALUES (${mision_id},${nombre},${descripcion||null},${precio_est||null},${link||null},${max.next})
+        RETURNING *`;
+      return ok(headers, row);
+    }
+
+    if (path.match(/^\/misiones\/opcion\/(\d+)$/) && method === 'PUT') {
+      const id = +path.split('/')[3];
+      const { nombre, descripcion, precio_est, link } = body;
+      await sql`UPDATE opciones_regalo SET nombre=${nombre},descripcion=${descripcion||null},precio_est=${precio_est||null},link=${link||null} WHERE id=${id}`;
+      return ok(headers, { success: true });
+    }
+
+    if (path.match(/^\/misiones\/opcion\/(\d+)$/) && method === 'DELETE') {
+      await sql`DELETE FROM opciones_regalo WHERE id=${+path.split('/')[3]}`;
+      return ok(headers, { success: true });
+    }
+
+    // Votos de opciones de regalo
+    if (path === '/misiones/voto' && method === 'POST') {
+      const { opcion_id, chica_id } = body;
+      // toggle voto
+      const existing = await sql`SELECT id FROM votos_regalo WHERE opcion_id=${opcion_id} AND chica_id=${chica_id}`;
+      if (existing.length) {
+        await sql`DELETE FROM votos_regalo WHERE opcion_id=${opcion_id} AND chica_id=${chica_id}`;
+      } else {
+        await sql`INSERT INTO votos_regalo (opcion_id,chica_id) VALUES (${opcion_id},${chica_id}) ON CONFLICT DO NOTHING`;
+      }
       return ok(headers, { success: true });
     }
 

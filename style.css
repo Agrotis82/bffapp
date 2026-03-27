@@ -740,3 +740,23 @@ html, body {
   color: var(--text-sec); transition: all 0.15s; background: transparent;
 }
 .split-chip.sel { color: var(--teal-d); }
+
+/* ══════════════════════════════════════════════
+   DEUDAS COLAPSABLES
+══════════════════════════════════════════════ */
+.fin-deuda-group {
+  padding: 10px 0;
+  border-bottom: 0.5px solid var(--border);
+  cursor: pointer;
+}
+.fin-deuda-group:last-child { border-bottom: none; }
+.fin-deuda-group:hover { background: var(--surface); margin: 0 -0.5rem; padding: 10px 0.5rem; border-radius: 10px; }
+
+.fin-deuda-detail {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 0.5px solid var(--border);
+}
+.fin-deuda-detail:last-of-type { border-bottom: none; }

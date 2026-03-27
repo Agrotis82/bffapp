@@ -64,7 +64,7 @@ html, body {
    TOPBAR
 ══════════════════════════════════════════ */
 .topbar {
-  padding: 0.9rem 1.25rem 0.7rem;
+  padding: 0.75rem 1rem 0.6rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -127,24 +127,24 @@ html, body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 12px 4px 10px;
+  padding: 10px 2px 8px;
   cursor: pointer;
-  gap: 4px;
+  gap: 3px;
   border: none;
   background: transparent;
   font-family: var(--fb);
-  min-height: 56px;
+  min-height: 52px;
 }
 .nav-icon {
-  width: 26px;
-  height: 26px;
+  width: 24px;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
   color: var(--text-sec);
 }
-.nav-label { font-size: 11px; color: var(--text-ter); font-weight: 500; }
+.nav-label { font-size: 10px; color: var(--text-ter); font-weight: 500; letter-spacing: -0.2px; }
 .nav-item.active .nav-label { color: var(--hot); }
 .nav-item.active .nav-icon  { color: var(--hot); }
 .nav-badge {
@@ -741,22 +741,9 @@ html, body {
 }
 .split-chip.sel { color: var(--teal-d); }
 
-/* ══════════════════════════════════════════════
-   DEUDAS COLAPSABLES
-══════════════════════════════════════════════ */
-.fin-deuda-group {
-  padding: 10px 0;
-  border-bottom: 0.5px solid var(--border);
-  cursor: pointer;
-}
-.fin-deuda-group:last-child { border-bottom: none; }
-.fin-deuda-group:hover { background: var(--surface); margin: 0 -0.5rem; padding: 10px 0.5rem; border-radius: 10px; }
-
-.fin-deuda-detail {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 0;
-  border-bottom: 0.5px solid var(--border);
-}
-.fin-deuda-detail:last-of-type { border-bottom: none; }
+/* ── Quick cards equal height ── */
+.quick-grid { align-items: stretch; }
+.quick-card { display: flex; flex-direction: column; justify-content: center; min-height: 90px; }
+.quick-icon { font-size: 22px; margin-bottom: 5px; }
+.quick-label { font-size: 13px; font-weight: 500; }
+.quick-sub { font-size: 11px; opacity: 0.8; margin-top: 2px; }

@@ -868,15 +868,13 @@ function _openGastoModal(prefill) {
       }).join('')}
     </div>
     <div id="fg-preview" style="font-size:11px;color:var(--text-sec);margin-bottom:10px;"></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
-      <div>
-        <label class="field-label">Fecha del gasto</label>
-        <input class="field-input" id="fg-fecha" type="date" value="${prefill?.fecha_registro||new Date().toISOString().slice(0,10)}" style="margin-bottom:0;">
-      </div>
-      <div>
-        <label class="field-label">Notas (opcional)</label>
-        <input class="field-input" id="fg-notas" placeholder="Detalles..." value="${prefill?.notas||''}" style="margin-bottom:0;">
-      </div>
+    <div class="field-group">
+      <label class="field-label">Fecha del gasto</label>
+      <input class="field-input" id="fg-fecha" type="date" value="${prefill?.fecha_registro||new Date().toISOString().slice(0,10)}">
+    </div>
+    <div class="field-group">
+      <label class="field-label">Notas (opcional)</label>
+      <input class="field-input" id="fg-notas" placeholder="Detalles..." value="${prefill?.notas||''}">
     </div>
     <div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface);border-radius:12px;padding:10px 12px;margin-bottom:10px;">
       <div>
@@ -959,8 +957,9 @@ async function saveGastoAPI() {
   const nombre    = document.getElementById('fg-nombre').value.trim();
   const monto     = parseFloat(document.getElementById('fg-monto').value);
   const pagadoPor = parseInt(document.getElementById('fg-pagadopor').value);
-  if (!nombre || !monto || monto<=0 || !finState.selSplit.length) return;
   const soloReg = document.getElementById('fg-solo')?.classList.contains('on') || false;
+  if (!nombre || !monto || monto<=0) return;
+  if (!soloReg && !finState.selSplit.length) return;
   const payload = {
     evento_id:       finState.eventoId,
     nombre, monto,

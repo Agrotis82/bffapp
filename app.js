@@ -281,7 +281,7 @@ function renderEventos(filtro) {
         </div>
         <div class="evento-actions">
           ${e.tipo==='viaje' ? `<button class="evento-btn primary" onclick="abrirDetalle(${e.id})">Ver itinerario →</button>` : ''}
-          <button class="evento-btn" onclick="abrirEncuestas(${e.id},'${e.nombre}')">🗳️ Encuestas</button>
+          <button class="evento-btn" onclick="abrirEncuestas(${e.id})">🗳️ Encuestas</button>
           <button class="evento-btn" onclick="shareWhatsApp('evento',${e.id})">📱 Compartir</button>
         </div>
       </div>`;
@@ -1366,6 +1366,13 @@ function openWA(tel) {
 /* ══════════════════════════════════════════════
    REGALO SORPRESA 🎁
 ══════════════════════════════════════════════ */
+async function loadRegalo() {
+  try {
+    misiones = await get('/misiones');
+    renderRegalo();
+  } catch(e) { console.warn('Regalo:', e); }
+}
+
 function renderRegalo() {
   const container = document.getElementById('regalo-list');
   if (!container) return;
@@ -1634,8 +1641,10 @@ async function votarOpcionRegalo(opcionId) {
 ══════════════════════════════════════════════ */
 let encuestasEventoActual = null;
 
-function abrirEncuestas(eventoId, eventoNombre) {
+function abrirEncuestas(eventoId) {
   encuestasEventoActual = eventoId;
+  const ev = eventos.find(e=>e.id===eventoId);
+  const eventoNombre = ev?.nombre || '';
   openModal(`
     <div class="modal-title">🗳️ Encuestas · ${eventoNombre}</div>
     <div id="encuestas-modal-list" style="min-height:80px;">
@@ -1712,7 +1721,7 @@ async function crearEncuestaManual(eventoId) {
     tipo: 'opcion_unica'
   });
   closeModal();
-  setTimeout(() => abrirEncuestas(eventoId, ''), 100);
+  setTimeout(() => abrirEncuestas(eventoId), 100);
 }
 
 async function openAddOpcionEncuesta(encId) {
@@ -1731,7 +1740,7 @@ async function agregarOpcionEncuesta(encId) {
   if (!nombre) return;
   await post('/encuestas/opcion', { encuesta_id:encId, nombre });
   closeModal();
-  if (encuestasEventoActual) setTimeout(() => abrirEncuestas(encuestasEventoActual, ''), 100);
+  if (encuestasEventoActual) setTimeout(() => abrirEncuestas(encuestasEventoActual), 100);
 }
 
 function shareWhatsApp(type, eventoId) {
@@ -1941,18 +1950,19 @@ async function init() {
     // Evento principal (viaje)
     currentEventoId = eventos.find(e=>e.tipo==='viaje')?.id || null;
 
-    // Renderizar todo en paralelo
-    await Promise.all([
-      renderHome(),
-      loadFinanzas(),
-      loadPolls(),
-      loadRegalo(),
-    ]);
-
-    // Renders sincrónicos
+    // Renders sincrónicos primero (no dependen de datos externos)
     renderEventos();
     renderBdayBanner();
     renderChicas();
+
+    // Cargar módulos en paralelo
+    await Promise.all([
+      renderHome(),
+      loadFinanzas(),
+      loadPolls().catch(e => console.warn('Polls:', e)),
+      loadRegalo().catch(e => console.warn('Regalo:', e)),
+    ]);
+
     if (currentEventoId) loadRio(currentEventoId);
 
   } catch(e) {

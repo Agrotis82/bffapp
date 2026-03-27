@@ -265,7 +265,11 @@ exports.handler = async (event) => {
         }
       }
       const [c] = await sql`SELECT nombre FROM chicas WHERE id=${pagado_por}`;
-      await logFeed(sql, pagado_por, 'gasto', `${c.nombre} registró: ${nombre} (${moneda||'USD'} ${monto})`, evento_id);
+      const [ev] = await sql`SELECT nombre FROM eventos WHERE id=${evento_id}`;
+      const monStr = (moneda||'USD') === 'ARS'
+        ? `$${parseFloat(monto).toLocaleString('es-AR', {maximumFractionDigits:0})} ARS`
+        : `$${parseFloat(monto).toFixed(2)} USD`;
+      await logFeed(sql, pagado_por, 'gasto', `${c.nombre} registró un pago en ${ev?.nombre||'evento'}: ${nombre} · ${monStr}`, evento_id);
       return ok(headers, gasto);
     }
 
@@ -327,9 +331,12 @@ exports.handler = async (event) => {
       if (+pending.cnt === 0) {
         await sql`UPDATE gastos SET saldado=true WHERE id=${gastoId}`;
       }
-      const [c] = await sql`SELECT nombre FROM chicas WHERE id=${chica_id}`;
-      const [g] = await sql`SELECT nombre, evento_id FROM gastos WHERE id=${gastoId}`;
-      await logFeed(sql, chica_id, 'pago', `${c.nombre} saldó su parte de "${g.nombre}"`, g.evento_id);
+      const [c2] = await sql`SELECT nombre FROM chicas WHERE id=${chica_id}`;
+      const [g2] = await sql`SELECT nombre, evento_id, monto FROM gastos WHERE id=${gastoId}`;
+      const [ev2] = await sql`SELECT nombre FROM eventos WHERE id=${g2.evento_id}`;
+      const [pg2] = await sql`SELECT monto_debe FROM participantes_gasto WHERE gasto_id=${gastoId} AND chica_id=${chica_id}`;
+      const montoStr = `$${parseFloat(pg2?.monto_debe||0).toFixed(2)} USD`;
+      await logFeed(sql, chica_id, 'pago', `${c2.nombre} saldó ${montoStr} en ${ev2?.nombre||'evento'}: ${g2.nombre}`, g2.evento_id);
       return ok(headers, { success: true });
     }
 

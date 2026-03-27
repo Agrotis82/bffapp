@@ -1027,7 +1027,8 @@ async function saveGastoAPI() {
   };
   if (finState.editingGasto) await put(`/gastos/${finState.editingGasto.id}`, payload);
   else                        await post('/gastos', payload);
-  closeModal(); await refreshFinanzas();
+  closeModal();
+  await Promise.all([refreshFinanzas(), renderHome()]);
 }
 
 function confirmDeleteGasto(id) {
@@ -1046,7 +1047,7 @@ async function deleteGastoAPI(id) {
 
 async function toggleSaldado(id, saldado) {
   await put(`/gastos/${id}/${saldado?'desaldar':'saldar'}`, {});
-  await refreshFinanzas();
+  await Promise.all([refreshFinanzas(), renderHome()]);
 }
 
 function waDeuda(de, para, monto, mon) {

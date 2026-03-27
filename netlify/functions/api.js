@@ -271,37 +271,78 @@ exports.handler = async (event) => {
       return ok(headers, { success: true });
     }
 
+    // Saldar gasto completo (todos los participantes)
     if (path.match(/^\/gastos\/(\d+)\/saldar$/) && method === 'PUT') {
       const id = +path.split('/')[2];
+      await sql`UPDATE participantes_gasto SET pagado=true, pagado_at=NOW() WHERE gasto_id=${id}`;
       await sql`UPDATE gastos SET saldado=true WHERE id=${id}`;
-      await sql`UPDATE participantes_gasto SET pagado=true,pagado_at=NOW() WHERE gasto_id=${id}`;
       return ok(headers, { success: true });
     }
 
+    // Desaldar gasto completo
     if (path.match(/^\/gastos\/(\d+)\/desaldar$/) && method === 'PUT') {
       const id = +path.split('/')[2];
+      await sql`UPDATE participantes_gasto SET pagado=false, pagado_at=NULL WHERE gasto_id=${id}`;
       await sql`UPDATE gastos SET saldado=false WHERE id=${id}`;
-      await sql`UPDATE participantes_gasto SET pagado=false,pagado_at=NULL WHERE gasto_id=${id}`;
+      return ok(headers, { success: true });
+    }
+
+    // Saldar deuda de UN participante específico en un gasto
+    // PUT /gastos/:id/saldar_participante { chica_id }
+    if (path.match(/^\/gastos\/(\d+)\/saldar_participante$/) && method === 'PUT') {
+      const gastoId  = +path.split('/')[2];
+      const { chica_id } = body;
+      await sql`
+        UPDATE participantes_gasto
+        SET pagado=true, pagado_at=NOW()
+        WHERE gasto_id=${gastoId} AND chica_id=${chica_id}`;
+      // Auto-saldar el gasto si todos pagaron (trigger lo hace, pero por si acaso)
+      const [pending] = await sql`
+        SELECT COUNT(*) AS cnt FROM participantes_gasto
+        WHERE gasto_id=${gastoId} AND pagado=false`;
+      if (+pending.cnt === 0) {
+        await sql`UPDATE gastos SET saldado=true WHERE id=${gastoId}`;
+      }
+      const [c] = await sql`SELECT nombre FROM chicas WHERE id=${chica_id}`;
+      const [g] = await sql`SELECT nombre, evento_id FROM gastos WHERE id=${gastoId}`;
+      await logFeed(sql, chica_id, 'pago', `${c.nombre} saldó su parte de "${g.nombre}"`, g.evento_id);
+      return ok(headers, { success: true });
+    }
+
+    // Desaldar participante específico
+    if (path.match(/^\/gastos\/(\d+)\/desaldar_participante$/) && method === 'PUT') {
+      const gastoId  = +path.split('/')[2];
+      const { chica_id } = body;
+      await sql`
+        UPDATE participantes_gasto
+        SET pagado=false, pagado_at=NULL
+        WHERE gasto_id=${gastoId} AND chica_id=${chica_id}`;
+      await sql`UPDATE gastos SET saldado=false WHERE id=${gastoId}`;
       return ok(headers, { success: true });
     }
 
     if (path.match(/^\/gastos\/(\d+)\/deudas$/) && method === 'GET') {
       const eventoId = +path.split('/')[2];
       const moneda   = event.queryStringParameters?.moneda || 'USD';
-      const gastos   = await sql`
-        SELECT g.id,g.monto,g.pagado_por,
-          ARRAY_AGG(pg.chica_id) AS participantes
-        FROM gastos g
-        JOIN participantes_gasto pg ON pg.gasto_id=g.id AND pg.pagado=false
-        WHERE g.evento_id=${eventoId} AND g.moneda=${moneda} AND g.saldado=false AND g.solo_registro=false
-        GROUP BY g.id`;
+      // Get unpaid participantes (not just unsaldado gastos)
+      const participantes = await sql`
+        SELECT pg.chica_id, pg.monto_debe, g.pagado_por, g.id AS gasto_id
+        FROM participantes_gasto pg
+        JOIN gastos g ON g.id = pg.gasto_id
+        WHERE g.evento_id=${eventoId}
+          AND g.moneda=${moneda}
+          AND g.solo_registro=false
+          AND pg.pagado=false
+          AND pg.chica_id != g.pagado_por`;
 
       const balance = {};
-      for (const g of gastos) {
-        const parte = parseFloat(g.monto) / g.participantes.length;
-        balance[g.pagado_por] = (balance[g.pagado_por]||0) + parseFloat(g.monto);
-        for (const id of g.participantes) balance[id] = (balance[id]||0) - parte;
+      for (const p of participantes) {
+        const debe = parseFloat(p.monto_debe);
+        balance[p.chica_id]   = (balance[p.chica_id]  ||0) - debe;
+        balance[p.pagado_por] = (balance[p.pagado_por]||0) + debe;
       }
+      // keep gastos for backward compat
+      const gastos = [];
 
       const deudores   = Object.entries(balance).filter(([,v])=>v<-0.01).map(([id,v])=>({id:+id,monto:-v})).sort((a,b)=>b.monto-a.monto);
       const acreedores = Object.entries(balance).filter(([,v])=>v> 0.01).map(([id,v])=>({id:+id,monto:v})).sort((a,b)=>b.monto-a.monto);

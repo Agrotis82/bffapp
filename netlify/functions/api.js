@@ -64,6 +64,11 @@ exports.handler = async (event) => {
     // ── EVENTOS ────────────────────────────────────────
     if (path === '/eventos' && method === 'GET') {
       const rows = await sql`SELECT * FROM eventos WHERE activo=true ORDER BY fecha_inicio NULLS LAST`;
+      // enrich with confirmadas count
+      for (const e of rows) {
+        const [cnt] = await sql`SELECT COUNT(*)::int AS cnt FROM rsvp WHERE evento_id=${e.id} AND estado='confirmada'`;
+        e.confirmadas_count = cnt.cnt;
+      }
       return ok(headers, rows.map(e => ({
         ...e,
         fecha_inicio: fmtDate(e.fecha_inicio),
@@ -115,6 +120,20 @@ exports.handler = async (event) => {
         INSERT INTO rsvp (evento_id,chica_id,estado)
         VALUES (${evento_id},${chica_id},${estado})
         ON CONFLICT (evento_id,chica_id) DO UPDATE SET estado=${estado},updated_at=NOW()`;
+      return ok(headers, { success: true });
+    }
+
+    // PUT /rsvp/bulk — update multiple rsvp at once
+    if (path === '/rsvp/bulk' && method === 'PUT') {
+      const { evento_id, confirmadas } = body; // confirmadas = array of chica_ids
+      // Mark all as no_va first, then mark confirmadas as confirmada
+      await sql`UPDATE rsvp SET estado='no_va' WHERE evento_id=${evento_id}`;
+      for (const chica_id of confirmadas) {
+        await sql`
+          INSERT INTO rsvp (evento_id,chica_id,estado)
+          VALUES (${evento_id},${chica_id},'confirmada')
+          ON CONFLICT (evento_id,chica_id) DO UPDATE SET estado='confirmada',updated_at=NOW()`;
+      }
       return ok(headers, { success: true });
     }
 

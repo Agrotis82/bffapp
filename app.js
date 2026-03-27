@@ -654,14 +654,16 @@ async function loadFinanzas() {
 async function refreshFinanzas() {
   try {
     const { eventoId, moneda } = finState;
+    // Load ALL gastos (no moneda filter) + deudas for current moneda
     const [data, deudaData] = await Promise.all([
-      get(`/gastos/${eventoId}?moneda=${moneda}`),
+      get(`/gastos/${eventoId}`),  // all monedas
       get(`/gastos/${eventoId}/deudas?moneda=${moneda}`),
     ]);
-    finState.gastos  = data.gastos  || [];
-    finState.totales = data.totales || [];
-    finState.deudas  = deudaData.transacciones || [];
-    finState.balance = deudaData.balance       || [];
+    finState.gastosAll = data.gastos  || [];  // keep all
+    finState.gastos    = (data.gastos||[]).filter(g => g.moneda === moneda); // filtered for display
+    finState.totales   = data.totales || [];
+    finState.deudas    = deudaData.transacciones || [];
+    finState.balance   = deudaData.balance       || [];
     renderFinanzasAll();
   } catch(e) { console.warn('Finanzas:', e); }
 }
@@ -747,25 +749,66 @@ function renderFinDeudas() {
   const list = document.getElementById('fin-deudas-list');
   if (!list) return;
   const { deudas, moneda } = finState;
+
+  // Check if ALL gastos compartidos are saldado
+  const compartidos = (finState.gastos||[]).filter(g => !g.solo_registro && g.moneda===moneda);
+  const todosSaldados = compartidos.length > 0 && compartidos.every(g => g.saldado);
+
   if (!deudas.length) {
-    list.innerHTML = `<div style="text-align:center;padding:1rem;font-size:12px;color:var(--teal-d);">🎉 ¡Todo saldado! No hay deudas pendientes.</div>`;
+    const msg = todosSaldados
+      ? '🎉 ¡Todo saldado! Los gastos compartidos están cerrados.'
+      : compartidos.length === 0
+        ? '📌 Solo hay gastos de registro, sin deudas compartidas.'
+        : '🎉 ¡Todo saldado! No hay deudas pendientes.';
+    list.innerHTML = `<div style="text-align:center;padding:1rem;font-size:12px;color:var(--teal-d);">${msg}</div>`;
     return;
   }
+
   list.innerHTML = deudas.map(t => {
     const de   = t.de_chica   || {};
     const para = t.para_chica || {};
     return `
-      <div class="fin-deuda-row">
-        <div class="fin-av" style="background:${de.bg_color};color:${de.color};">${(de.apodo||'?').slice(0,2)}</div>
-        <div style="flex:1;min-width:0;">
-          <div style="font-size:12px;font-weight:500;color:var(--text);">${de.nombre}</div>
-          <div style="font-size:11px;color:var(--text-sec);">le debe a ${para.nombre}</div>
+      <div class="fin-deuda-row" style="flex-wrap:wrap;gap:6px;">
+        <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
+          <div class="fin-av" style="background:${de.bg_color};color:${de.color};">${(de.apodo||'?').slice(0,2)}</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:12px;font-weight:500;color:var(--text);">${de.nombre} → ${para.nombre}</div>
+            <div style="font-size:13px;font-weight:500;color:var(--hot-d);">${fmt(t.monto,moneda)}</div>
+          </div>
+          <div class="fin-av" style="background:${para.bg_color};color:${para.color};">${(para.apodo||'?').slice(0,2)}</div>
         </div>
-        <div class="fin-av" style="background:${para.bg_color};color:${para.color};">${(para.apodo||'?').slice(0,2)}</div>
-        <div style="font-size:13px;font-weight:500;color:var(--hot-d);min-width:52px;text-align:right;">${fmt(t.monto,moneda)}</div>
-        <button class="fin-wa-btn" onclick="waDeuda('${de.nombre}','${para.nombre}',${t.monto},'${moneda}')">📱</button>
+        <div style="display:flex;gap:6px;width:100%;padding-top:4px;">
+          <button class="fin-wa-btn" style="flex:1;" onclick="waDeuda('${de.nombre}','${para.nombre}',${t.monto},'${moneda}')">📱 Recordatorio</button>
+          <button class="fin-wa-btn" style="flex:1;background:var(--teal);" onclick="confirmarSaldarDeuda('${de.nombre}','${para.nombre}',${t.monto},'${moneda}',${JSON.stringify(finState.gastos.filter(g=>!g.solo_registro&&!g.saldado&&g.moneda===moneda).map(g=>g.id))})">✓ Saldar</button>
+        </div>
       </div>`;
   }).join('');
+}
+
+async function confirmarSaldarDeuda(deNombre, paraNombre, monto, moneda, gastoIds) {
+  openModal(`
+    <div class="modal-title">¿Saldar deuda?</div>
+    <div style="background:var(--teal-l);border-radius:12px;padding:1rem;margin-bottom:1rem;text-align:center;">
+      <div style="font-size:13px;color:var(--teal-d);">
+        <strong>${deNombre}</strong> le pagó a <strong>${paraNombre}</strong>
+      </div>
+      <div style="font-size:20px;font-weight:500;color:var(--teal-d);margin-top:4px;">${fmt(monto, moneda)}</div>
+    </div>
+    <div style="font-size:12px;color:var(--text-sec);margin-bottom:1rem;">
+      Esto marcará todos los gastos compartidos pendientes como saldados.
+    </div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+      <button class="btn-teal" onclick="saldarDeudaCompleta(${JSON.stringify(gastoIds)})">✓ Confirmar saldo</button>
+    </div>`);
+}
+
+async function saldarDeudaCompleta(gastoIds) {
+  closeModal();
+  for (const id of gastoIds) {
+    await put(`/gastos/${id}/saldar`, {});
+  }
+  await refreshFinanzas();
 }
 
 function renderFinBalance() {
@@ -800,7 +843,17 @@ function finToggleMoneda(mon) {
   finState.moneda = mon;
   document.getElementById('fin-btn-usd')?.classList.toggle('on', mon==='USD');
   document.getElementById('fin-btn-ars')?.classList.toggle('on', mon==='ARS');
-  refreshFinanzas();
+  // re-filter from cached gastosAll, only refetch deudas for new moneda
+  if (finState.gastosAll) {
+    finState.gastos = finState.gastosAll.filter(g => g.moneda === mon);
+    get(`/gastos/${finState.eventoId}/deudas?moneda=${mon}`).then(d => {
+      finState.deudas  = d.transacciones || [];
+      finState.balance = d.balance       || [];
+      renderFinanzasAll();
+    }).catch(e => console.warn(e));
+  } else {
+    refreshFinanzas();
+  }
 }
 
 /* ── Modal gasto ── */

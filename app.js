@@ -25,8 +25,8 @@ function showLoginScreen() {
   const grid = document.getElementById('login-chicas-grid');
   if(!grid) return;
   grid.innerHTML = window.chicas.map(c => `
-    <div onclick="selectLogin(${c.id})" style="cursor:pointer;text-align:center;padding:10px 6px;border-radius:14px;border:2px solid transparent;transition:all 0.15s;" onmouseover="this.style.borderColor='${c.color}'" onmouseout="this.style.borderColor='transparent'">
-      <div style="width:44px;height:44px;border-radius:50%;background:${c.bg_color};color:${c.color};display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:500;margin:0 auto 6px;border:2px solid ${c.color};">
+    <div onclick="selectLogin(${c.id})" style="cursor:pointer;text-align:center;padding:10px 6px;border-radius:14px;border:2px solid transparent;transition:all 0.15s;" onmouseover="this.style.background='var(--aurora-l)';this.style.borderColor='var(--aurora-1)'" onmouseout="this.style.background='transparent';this.style.borderColor='transparent'">
+      <div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,${c.bg_color},${c.color}22);color:${c.color};display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:500;margin:0 auto 6px;border:2px solid ${c.color};">
         ${(c.apodo||c.nombre).slice(0,2)}
       </div>
       <div style="font-size:11px;font-weight:500;color:var(--text);">${c.nombre.split(' ')[0]}</div>
@@ -46,11 +46,11 @@ function postLoginRender() {
   const userEl = document.getElementById('topbar-user');
   if(userEl && currentUser) {
     userEl.innerHTML = `
-      <div onclick="confirmLogout()" style="display:flex;align-items:center;gap:5px;cursor:pointer;background:var(--surface);border-radius:20px;padding:3px 8px 3px 3px;border:1px solid var(--border);">
-        <div style="width:26px;height:26px;border-radius:50%;background:${currentUser.bg_color};color:${currentUser.color};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:500;flex-shrink:0;">
+      <div onclick="confirmLogout()" style="display:flex;align-items:center;gap:5px;cursor:pointer;background:var(--aurora-l);border-radius:20px;padding:3px 8px 3px 3px;border:1px solid var(--aurora-1);">
+        <div style="width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#7C3AED,#DB2777);color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:500;flex-shrink:0;">
           ${(currentUser.apodo||currentUser.nombre).slice(0,2)}
         </div>
-        <span style="font-size:11px;font-weight:500;color:var(--text);">${currentUser.nombre.split(' ')[0]}</span>
+        <span style="font-size:11px;font-weight:500;color:var(--aurora-d);">${currentUser.nombre.split(' ')[0]}</span>
       </div>`;
   }
   loadRegalo().catch(e => console.warn('Regalo:', e));

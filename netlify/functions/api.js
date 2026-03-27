@@ -1,5 +1,6 @@
 // netlify/functions/api.js · BFFapp — fix fechas + persistencia
 const { neon } = require('@neondatabase/serverless');
+const { getStore } = require('@netlify/blobs');
 const sql = neon(process.env.NETLIFY_DATABASE_URL);
 
 // Convierte Date object o string a "YYYY-MM-DD"
@@ -29,6 +30,56 @@ exports.handler = async (event) => {
   try { body = event.body ? JSON.parse(event.body) : {}; } catch(e) {}
 
   try {
+
+    // ── UPLOAD COMPROBANTE ────────────────────────────
+    if (path === '/upload' && method === 'POST') {
+      try {
+        const { filename, contentType, data } = body;
+        // data is base64 encoded
+        const buffer = Buffer.from(data, 'base64');
+        const store = getStore({ name: 'comprobantes', consistency: 'strong' });
+        const key = `gasto-${Date.now()}-${filename.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+        await store.set(key, buffer, { metadata: { contentType, filename } });
+        // Build public URL
+        const siteUrl = process.env.URL || 'https://samigas.netlify.app';
+        const url = `${siteUrl}/.netlify/blobs/${key}?store=comprobantes`;
+        return ok(headers, { success: true, url, key, filename });
+      } catch(err) {
+        console.error('Upload error:', err);
+        return { statusCode: 500, headers, body: JSON.stringify({ error: err.message }) };
+      }
+    }
+
+    // ── GET COMPROBANTE ───────────────────────────────
+    if (path.match(/^\/comprobante\/(.+)$/) && method === 'GET') {
+      try {
+        const key = path.replace('/comprobante/', '');
+        const store = getStore({ name: 'comprobantes', consistency: 'strong' });
+        const blob = await store.get(key, { type: 'arrayBuffer' });
+        const meta = await store.getMetadata(key);
+        const ct = meta?.metadata?.contentType || 'application/octet-stream';
+        return {
+          statusCode: 200,
+          headers: { ...headers, 'Content-Type': ct, 'Cache-Control': 'public, max-age=31536000' },
+          body: Buffer.from(blob).toString('base64'),
+          isBase64Encoded: true,
+        };
+      } catch(err) {
+        return { statusCode: 404, headers, body: JSON.stringify({ error: 'Not found' }) };
+      }
+    }
+
+    // ── DELETE COMPROBANTE ────────────────────────────
+    if (path.match(/^\/comprobante\/(.+)$/) && method === 'DELETE') {
+      try {
+        const key = path.replace('/comprobante/', '');
+        const store = getStore({ name: 'comprobantes', consistency: 'strong' });
+        await store.delete(key);
+        return ok(headers, { success: true });
+      } catch(err) {
+        return ok(headers, { success: false });
+      }
+    }
 
     // ── HEALTH ─────────────────────────────────────────
     if (path === '/health' && method === 'GET') {
@@ -248,11 +299,11 @@ exports.handler = async (event) => {
     }
 
     if (path === '/gastos' && method === 'POST') {
-      const { evento_id, nombre, monto, moneda, categoria, pagado_por, participantes, notas, fecha_registro, solo_registro } = body;
+      const { evento_id, nombre, monto, moneda, categoria, pagado_por, participantes, notas, fecha_registro, solo_registro, comprobante_url, comprobante_name } = body;
       const fechaReg = fecha_registro ? String(fecha_registro).slice(0,10) : null;
       const [gasto] = await sql`
-        INSERT INTO gastos (evento_id,nombre,monto,moneda,categoria,pagado_por,notas,fecha_registro,solo_registro)
-        VALUES (${evento_id},${nombre},${monto},${moneda||'USD'},${categoria||'otro'},${pagado_por},${notas||null},${fechaReg},${solo_registro||false})
+        INSERT INTO gastos (evento_id,nombre,monto,moneda,categoria,pagado_por,notas,fecha_registro,solo_registro,comprobante_url,comprobante_name)
+        VALUES (${evento_id},${nombre},${monto},${moneda||'USD'},${categoria||'otro'},${pagado_por},${notas||null},${fechaReg},${solo_registro||false},${comprobante_url||null},${comprobante_name||null})
         RETURNING *`;
       // solo insertar participantes si NO es solo_registro
       if (!solo_registro && participantes && participantes.length > 0) {
@@ -275,13 +326,14 @@ exports.handler = async (event) => {
 
     if (path.match(/^\/gastos\/(\d+)$/) && method === 'PUT') {
       const id = +path.split('/')[2];
-      const { nombre, monto, moneda, categoria, pagado_por, participantes, notas, fecha_registro, solo_registro } = body;
+      const { nombre, monto, moneda, categoria, pagado_por, participantes, notas, fecha_registro, solo_registro, comprobante_url, comprobante_name } = body;
       const fechaReg = fecha_registro ? String(fecha_registro).slice(0,10) : null;
       await sql`
         UPDATE gastos
         SET nombre=${nombre},monto=${monto},moneda=${moneda||'USD'},
             categoria=${categoria||'otro'},pagado_por=${pagado_por},notas=${notas||null},
-            fecha_registro=${fechaReg},solo_registro=${solo_registro||false}
+            fecha_registro=${fechaReg},solo_registro=${solo_registro||false},
+            comprobante_url=${comprobante_url||null},comprobante_name=${comprobante_name||null}
         WHERE id=${id}`;
       // reinsertar participantes solo si no es solo_registro
       await sql`DELETE FROM participantes_gasto WHERE gasto_id=${id}`;

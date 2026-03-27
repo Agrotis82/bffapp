@@ -63,16 +63,21 @@ exports.handler = async (event) => {
 
     // ── EVENTOS ────────────────────────────────────────
     if (path === '/eventos' && method === 'GET') {
-      const rows = await sql`SELECT * FROM eventos WHERE activo=true ORDER BY fecha_inicio NULLS LAST`;
-      // enrich with confirmadas count
-      for (const e of rows) {
-        const [cnt] = await sql`SELECT COUNT(*)::int AS cnt FROM rsvp WHERE evento_id=${e.id} AND estado='confirmada'`;
-        e.confirmadas_count = cnt.cnt;
-      }
+      const rows = await sql`
+        SELECT e.*,
+          COALESCE(r.cnt, 0)::int AS confirmadas_count
+        FROM eventos e
+        LEFT JOIN (
+          SELECT evento_id, COUNT(*)::int AS cnt
+          FROM rsvp WHERE estado='confirmada'
+          GROUP BY evento_id
+        ) r ON r.evento_id = e.id
+        WHERE e.activo=true
+        ORDER BY e.fecha_inicio NULLS LAST`;
       return ok(headers, rows.map(e => ({
         ...e,
         fecha_inicio: fmtDate(e.fecha_inicio),
-        fecha_fin: fmtDate(e.fecha_fin),
+        fecha_fin:    fmtDate(e.fecha_fin),
       })));
     }
 

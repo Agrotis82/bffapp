@@ -440,6 +440,15 @@ async function guardarEvento(id) {
     lugar, hotel: lugar,
     descripcion: document.getElementById('m-desc').value.trim(),
   });
+  // Save rsvp if edited
+  if (window._editRsvp && window._editRsvp.eventoId === id) {
+    await put('/rsvp/bulk', { evento_id: id, confirmadas: window._editRsvp.confirmadas });
+    // Update rsvpConfirmadas if this is the current finanzas evento
+    if (finState.eventoId === id) {
+      finState.rsvpConfirmadas = window._editRsvp.confirmadas;
+    }
+    window._editRsvp = null;
+  }
   eventos = await get('/eventos');
   closeModal(); renderEventos(); renderHome();
 }
@@ -648,6 +657,11 @@ async function loadFinanzas() {
   const rio = eventos.find(e=>e.tipo==='viaje');
   if (!rio) return;
   finState.eventoId = rio.id;
+  // load rsvp confirmadas for default evento
+  try {
+    const rsvp = await get(`/rsvp/${rio.id}`);
+    finState.rsvpConfirmadas = rsvp.filter(r=>r.estado==='confirmada').map(r=>r.chica_id);
+  } catch(e) { finState.rsvpConfirmadas = window.chicas.map(c=>c.id); }
   await refreshFinanzas();
 }
 
@@ -770,22 +784,45 @@ function renderFinDeudas() {
     return;
   }
 
-  list.innerHTML = deudas.map(t => {
-    const de   = t.de_chica   || {};
-    const para = t.para_chica || {};
+  // Group by deudora
+  const grouped = {};
+  deudas.forEach(t => {
+    const key = t.de;
+    if (!grouped[key]) grouped[key] = { chica: t.de_chica, deudas: [] };
+    grouped[key].deudas.push(t);
+  });
+
+  list.innerHTML = Object.values(grouped).map(g => {
+    const c = g.chica || {};
+    const total = g.deudas.reduce((a,t)=>a+t.monto, 0);
+    const rowId = `deuda-group-${c.id||Math.random()}`;
+    const rows = g.deudas.map(t => {
+      const para = t.para_chica || {};
+      return `
+        <div class="fin-deuda-detail">
+          <div class="fin-av" style="background:${para.bg_color};color:${para.color};width:24px;height:24px;font-size:9px;">${(para.apodo||'?').slice(0,2)}</div>
+          <div style="flex:1;font-size:12px;color:var(--text-sec);">le debe a ${para.nombre}</div>
+          <div style="font-size:12px;font-weight:500;color:var(--hot-d);">${fmt(t.monto,moneda)}</div>
+          <button class="fin-wa-btn" style="padding:3px 8px;font-size:10px;" onclick="waDeuda('${c.nombre}','${para.nombre}',${t.monto},'${moneda}')">📱</button>
+        </div>`;
+    }).join('');
+
     return `
-      <div class="fin-deuda-row" style="flex-wrap:wrap;gap:6px;">
-        <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
-          <div class="fin-av" style="background:${de.bg_color};color:${de.color};">${(de.apodo||'?').slice(0,2)}</div>
-          <div style="flex:1;min-width:0;">
-            <div style="font-size:12px;font-weight:500;color:var(--text);">${de.nombre} → ${para.nombre}</div>
-            <div style="font-size:13px;font-weight:500;color:var(--hot-d);">${fmt(t.monto,moneda)}</div>
+      <div class="fin-deuda-group" onclick="toggleDeudaGroup('${rowId}')">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div class="fin-av" style="background:${c.bg_color};color:${c.color};">${(c.apodo||'?').slice(0,2)}</div>
+          <div style="flex:1;">
+            <div style="font-size:13px;font-weight:500;color:var(--text);">${c.nombre}</div>
+            <div style="font-size:11px;color:var(--text-sec);">debe en total ${fmt(total,moneda)}</div>
           </div>
-          <div class="fin-av" style="background:${para.bg_color};color:${para.color};">${(para.apodo||'?').slice(0,2)}</div>
+          <svg id="${rowId}-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-ter)" stroke-width="2" stroke-linecap="round" style="transition:transform 0.2s;flex-shrink:0;"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
-        <div style="display:flex;gap:6px;width:100%;padding-top:4px;">
-          <button class="fin-wa-btn" style="flex:1;" onclick="waDeuda('${de.nombre}','${para.nombre}',${t.monto},'${moneda}')">📱 Recordatorio</button>
-          <button class="fin-wa-btn" style="flex:1;background:var(--teal);" onclick="confirmarSaldarDeuda('${de.nombre}','${para.nombre}',${t.monto},'${moneda}',${t.de})">✓ Saldar</button>
+        <div id="${rowId}" style="display:none;margin-top:8px;border-top:0.5px solid var(--border);padding-top:8px;">
+          ${rows}
+          <div style="display:flex;gap:6px;margin-top:8px;">
+            <button class="fin-wa-btn" style="flex:1;" onclick="event.stopPropagation();waDeuda('${c.nombre}','varias',${total},'${moneda}')">📱 Recordatorio</button>
+            <button class="fin-wa-btn" style="flex:1;background:var(--teal);" onclick="event.stopPropagation();confirmarSaldarDeuda('${c.nombre}','sus acreedoras',${total},'${moneda}',${c.id})">✓ Saldar todo</button>
+          </div>
         </div>
       </div>`;
   }).join('');
@@ -846,6 +883,18 @@ function renderFinBalance() {
   if (rows.length) rows[rows.length-1].style.borderBottom='none';
 }
 
+async function finCambiarEvento(eventoId) {
+  finState.eventoId = +eventoId;
+  // reload rsvp for new evento
+  try {
+    const rsvp = await get(`/rsvp/${eventoId}`);
+    finState.rsvpConfirmadas = rsvp.filter(r=>r.estado==='confirmada').map(r=>r.chica_id);
+    // update split to only include confirmadas
+    finState.selSplit = finState.rsvpConfirmadas.length ? finState.rsvpConfirmadas : window.chicas.map(c=>c.id);
+    finUpdatePreview();
+  } catch(e) { console.warn(e); }
+}
+
 function finToggleMoneda(mon) {
   finState.moneda = mon;
   document.getElementById('fin-btn-usd')?.classList.toggle('on', mon==='USD');
@@ -867,7 +916,10 @@ function finToggleMoneda(mon) {
 function openAddGasto() {
   finState.editingGasto = null;
   finState.selCats  = ['alojamiento'];
-  finState.selSplit = window.chicas.map(c=>c.id);
+  // default split to confirmadas of current evento
+  finState.selSplit = finState.rsvpConfirmadas?.length
+    ? finState.rsvpConfirmadas
+    : window.chicas.map(c=>c.id);
   finState.selMon   = finState.moneda;
   _openGastoModal();
 }
@@ -885,8 +937,15 @@ function openEditGasto(id) {
 
 function _openGastoModal(prefill) {
   const { selCats, selSplit, selMon } = finState;
+  // get participantes for current evento
+  const eventoActual = eventos.find(e=>e.id===finState.eventoId);
+  const rsvpConfirmadas = finState.rsvpConfirmadas || window.chicas.map(c=>c.id);
   openModal(`
     <div class="modal-title">${prefill ? 'Editar gasto' : 'Registrar gasto'}</div>
+    <label class="field-label">Evento</label>
+    <select class="field-input" id="fg-evento" onchange="finCambiarEvento(this.value)">
+      ${eventos.map(e=>`<option value="${e.id}" ${e.id===finState.eventoId?'selected':''}>${e.nombre}</option>`).join('')}
+    </select>
     <label class="field-label">Descripción</label>
     <input class="field-input" id="fg-nombre" placeholder="Ej: Cena en Copacabana" value="${prefill?.nombre||''}">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
@@ -917,11 +976,12 @@ function _openGastoModal(prefill) {
       ${window.chicas.map(c=>`<option value="${c.id}" ${prefill?.pagado_por===c.id?'selected':''}>${c.nombre}</option>`).join('')}
     </select>
     <label class="field-label">Se divide entre</label>
-    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;">
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;" id="fg-split-chips">
       ${window.chicas.map(c=>{
         const sel = selSplit.includes(c.id);
-        return `<div class="split-chip ${sel?'sel':''}" id="fgsp-${c.id}"
-                     style="${sel?'border-color:var(--teal);background:var(--teal-l);':''}"
+        const enEvento = rsvpConfirmadas.includes(c.id);
+        return `<div class="split-chip ${sel?'sel':''} ${!enEvento?'no-evento':''}" id="fgsp-${c.id}"
+                     style="${sel?'border-color:var(--teal);background:var(--teal-l);':!enEvento?'opacity:0.35;':''}${!enEvento?'pointer-events:none;':''}"
                      onclick="finToggleSplit(${c.id})">
           <div style="width:18px;height:18px;border-radius:50%;background:${c.bg_color||c.bg};color:${c.color};display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:500;">${(c.apodo||c.nombre).slice(0,2)}</div>
           ${c.nombre.split(' ')[0]}
@@ -1055,6 +1115,15 @@ async function deleteGastoAPI(id) {
 async function toggleSaldado(id, saldado) {
   await put(`/gastos/${id}/${saldado?'desaldar':'saldar'}`, {});
   await Promise.all([refreshFinanzas(), renderHome()]);
+}
+
+function toggleDeudaGroup(id) {
+  const el = document.getElementById(id);
+  const arrow = document.getElementById(id+'-arrow');
+  if (!el) return;
+  const open = el.style.display !== 'none';
+  el.style.display = open ? 'none' : 'block';
+  if (arrow) arrow.style.transform = open ? '' : 'rotate(180deg)';
 }
 
 function waDeuda(de, para, monto, mon) {

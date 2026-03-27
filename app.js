@@ -755,11 +755,13 @@ function renderFinDeudas() {
   const todosSaldados = compartidos.length > 0 && compartidos.every(g => g.saldado);
 
   if (!deudas.length) {
+    if (compartidos.length === 0) {
+      list.innerHTML = '';
+      return;
+    }
     const msg = todosSaldados
-      ? '🎉 ¡Todo saldado! Los gastos compartidos están cerrados.'
-      : compartidos.length === 0
-        ? '📌 Solo hay gastos de registro, sin deudas compartidas.'
-        : '🎉 ¡Todo saldado! No hay deudas pendientes.';
+      ? '🎉 ¡Gastos compartidos saldados!'
+      : '🎉 ¡Todo saldado! No hay deudas pendientes.';
     list.innerHTML = `<div style="text-align:center;padding:1rem;font-size:12px;color:var(--teal-d);">${msg}</div>`;
     return;
   }

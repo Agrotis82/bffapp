@@ -203,13 +203,15 @@ exports.handler = async (event) => {
       const eventoId = +path.split('/')[2];
       const moneda   = event.queryStringParameters?.moneda || null;
       const gastos   = moneda
-        ? await sql`SELECT g.*,fmtDate(g.fecha_registro) AS fecha_registro,c.nombre AS pagado_por_nombre,c.apodo AS pagado_por_apodo,c.color AS pagado_por_color,c.bg_color AS pagado_por_bg FROM gastos g JOIN chicas c ON c.id=g.pagado_por WHERE g.evento_id=${eventoId} AND g.moneda=${moneda} ORDER BY g.fecha_registro DESC,g.created_at DESC`
-        : await sql`SELECT g.*,c.nombre AS pagado_por_nombre,c.apodo AS pagado_por_apodo,c.color AS pagado_por_color,c.bg_color AS pagado_por_bg FROM gastos g JOIN chicas c ON c.id=g.pagado_por WHERE g.evento_id=${eventoId} ORDER BY g.fecha_registro DESC,g.created_at DESC`;
+        ? await sql`SELECT g.*,c.nombre AS pagado_por_nombre,c.apodo AS pagado_por_apodo,c.color AS pagado_por_color,c.bg_color AS pagado_por_bg FROM gastos g JOIN chicas c ON c.id=g.pagado_por WHERE g.evento_id=${eventoId} AND g.moneda=${moneda} ORDER BY g.fecha_registro DESC NULLS LAST,g.created_at DESC`
+        : await sql`SELECT g.*,c.nombre AS pagado_por_nombre,c.apodo AS pagado_por_apodo,c.color AS pagado_por_color,c.bg_color AS pagado_por_bg FROM gastos g JOIN chicas c ON c.id=g.pagado_por WHERE g.evento_id=${eventoId} ORDER BY g.fecha_registro DESC NULLS LAST,g.created_at DESC`;
       for (const g of gastos) {
         g.participantes = await sql`
           SELECT pg.*,c.nombre,c.apodo,c.color,c.bg_color
           FROM participantes_gasto pg JOIN chicas c ON c.id=pg.chica_id
           WHERE pg.gasto_id=${g.id}`;
+        // normalizar fechas en JS, no en SQL
+        g.fecha_registro = fmtDate(g.fecha_registro);
       }
       const totales = await sql`
         SELECT moneda, SUM(monto) AS total,

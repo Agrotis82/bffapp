@@ -18,7 +18,7 @@
 
 <!-- ══ LOGIN SCREEN ══ -->
 <div id="login-screen" style="display:none;position:fixed;inset:0;background:var(--card-bg);z-index:999;flex-direction:column;align-items:center;justify-content:center;padding:2rem;">
-  <div style="font-family:var(--fd);font-size:28px;color:var(--hot);margin-bottom:0.5rem;">BFFapp 💅</div>
+  <div class="login-title" style="font-size:32px;margin-bottom:0.5rem;">BFFapp 💅</div>
   <div style="font-size:14px;color:var(--text-sec);margin-bottom:2rem;">¿Quién sos?</div>
   <div id="login-chicas-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;max-width:360px;width:100%;"></div>
 </div>
@@ -30,7 +30,7 @@
   <!-- ══ TOP BAR ══ -->
   <div class="topbar">
     <div>
-      <div class="topbar-title">BFFapp 💅</div>
+      <div class="topbar-title">BFF<span style="color:var(--aurora-1);">app</span> 💅</div>
       <div class="topbar-sub">Las Amigas · <span id="total-chicas">–</span> chicas</div>
     </div>
     <div style="display:flex;align-items:center;gap:8px;"><div id="topbar-user"></div><button class="wa-btn" onclick="shareWhatsApp('general')">
@@ -58,25 +58,25 @@
       <div class="av-row" id="home-avatars"></div>
 
       <div class="quick-grid">
-        <div class="quick-card" style="background:var(--hot-l);" onclick="goTo('eventos')">
+        <div class="quick-card" style="background:#EDE9FE;" onclick="goTo('eventos')">
           <div class="quick-icon">✈️</div>
-          <div class="quick-label" style="color:var(--hot-d);">Eventos</div>
-          <div class="quick-sub" style="color:var(--hot-d);" id="home-eventos-sub">– planes</div>
+          <div class="quick-label" style="color:#4C1D95;">Eventos</div>
+          <div class="quick-sub" style="color:#6D28D9;" id="home-eventos-sub">– planes</div>
         </div>
-        <div class="quick-card" style="background:var(--pink-l);" onclick="goTo('spa')">
+        <div class="quick-card" style="background:#FCE7F3;" onclick="goTo('spa')">
           <div class="quick-icon">🎁</div>
-          <div class="quick-label" style="color:var(--pink-d);">Regalo</div>
-          <div class="quick-sub" style="color:var(--pink-d);">Sorpresa secreta</div>
+          <div class="quick-label" style="color:#831843;">Regalo</div>
+          <div class="quick-sub" style="color:#9D174D;">Sorpresa secreta</div>
         </div>
-        <div class="quick-card" style="background:var(--blue-l);" onclick="goTo('finanzas')">
+        <div class="quick-card" style="background:#DCFCE7;" onclick="goTo('finanzas')">
           <div class="quick-icon">💸</div>
-          <div class="quick-label" style="color:var(--blue-d);">Finanzas</div>
-          <div class="quick-sub" style="color:var(--blue-d);" id="home-finanzas-sub">– / –</div>
+          <div class="quick-label" style="color:#14532D;">Finanzas</div>
+          <div class="quick-sub" style="color:#166534;" id="home-finanzas-sub">– / –</div>
         </div>
-        <div class="quick-card" style="background:var(--purple-l);" onclick="goTo('chicas')">
+        <div class="quick-card" style="background:#FEF3C7;" onclick="goTo('chicas')">
           <div class="quick-icon">👯</div>
-          <div class="quick-label" style="color:var(--purple-d);">Las Chicas</div>
-          <div class="quick-sub" style="color:var(--purple-d);" id="home-chicas-sub">– chicas</div>
+          <div class="quick-label" style="color:#78350F;">Las Chicas</div>
+          <div class="quick-sub" style="color:#92400E;" id="home-chicas-sub">– chicas</div>
         </div>
       </div>
 

@@ -45,18 +45,27 @@ function selectLogin(chicaId) {
 function postLoginRender() {
   const userEl = document.getElementById('topbar-user');
   if(userEl && currentUser) {
-    userEl.innerHTML = `<div onclick="confirmLogout()" title="${currentUser.nombre}" style="width:30px;height:30px;border-radius:50%;background:${currentUser.bg_color};color:${currentUser.color};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;cursor:pointer;border:2px solid ${currentUser.color};flex-shrink:0;">${(currentUser.apodo||currentUser.nombre).slice(0,2)}</div>`;
+    userEl.innerHTML = `
+      <div onclick="confirmLogout()" style="display:flex;align-items:center;gap:5px;cursor:pointer;background:var(--surface);border-radius:20px;padding:3px 8px 3px 3px;border:1px solid var(--border);">
+        <div style="width:26px;height:26px;border-radius:50%;background:${currentUser.bg_color};color:${currentUser.color};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:500;flex-shrink:0;">
+          ${(currentUser.apodo||currentUser.nombre).slice(0,2)}
+        </div>
+        <span style="font-size:11px;font-weight:500;color:var(--text);">${currentUser.nombre.split(' ')[0]}</span>
+      </div>`;
   }
   loadRegalo().catch(e => console.warn('Regalo:', e));
 }
 
 function confirmLogout() {
   openModal(`
-    <div class="modal-title">Hola, ${currentUser?.nombre?.split(' ')[0]} 👋</div>
-    <div style="font-size:13px;color:var(--text-sec);margin-bottom:1.25rem;">¿Querés cambiar de usuario?</div>
+    <div class="modal-title">👋 Hola, ${currentUser?.nombre?.split(' ')[0]}!</div>
+    <div style="background:var(--surface);border-radius:12px;padding:0.75rem 1rem;margin-bottom:1rem;display:flex;align-items:center;gap:10px;">
+      <div style="width:40px;height:40px;border-radius:50%;background:${currentUser.bg_color};color:${currentUser.color};display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:500;">${(currentUser.apodo||currentUser.nombre).slice(0,2)}</div>
+      <div><div style="font-size:14px;font-weight:500;color:var(--text);">${currentUser.nombre}</div><div style="font-size:11px;color:var(--text-sec);">Usuario activo</div></div>
+    </div>
     <div class="modal-btns">
       <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
-      <button class="btn-danger" onclick="logout()">Cambiar usuario</button>
+      <button class="btn-save" onclick="logout()" style="background:var(--purple);">🔄 Cambiar usuario</button>
     </div>`);
 }
 

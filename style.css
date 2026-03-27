@@ -49,11 +49,10 @@ html, body {
    PHONE SHELL
 ══════════════════════════════════════════ */
 .phone {
-  max-width: 430px;
-  margin: 0 auto;
+  width: 100%;
   background: var(--card-bg);
   height: 100vh;
-  height: 100dvh; /* dynamic viewport — accounts for browser chrome */
+  height: 100dvh;
   display: flex;
   flex-direction: column;
   overflow: hidden;

@@ -38,6 +38,8 @@ window.chicas    = [];
 let eventos      = [];
 let days         = [];
 let polls        = {};
+let misiones     = [];
+let currentMisionId = null;
 let currentEventoId = null;
 
 // Finanzas
@@ -279,7 +281,7 @@ function renderEventos(filtro) {
         </div>
         <div class="evento-actions">
           ${e.tipo==='viaje' ? `<button class="evento-btn primary" onclick="abrirDetalle(${e.id})">Ver itinerario →</button>` : ''}
-          ${e.tipo==='spa'   ? `<button class="evento-btn primary" onclick="goTo('spa')">Ver encuesta →</button>` : ''}
+          <button class="evento-btn" onclick="abrirEncuestas(${e.id},'${e.nombre}')">🗳️ Encuestas</button>
           <button class="evento-btn" onclick="shareWhatsApp('evento',${e.id})">📱 Compartir</button>
         </div>
       </div>`;
@@ -1361,6 +1363,377 @@ function openWA(tel) {
 /* ══════════════════════════════════════════════
    WHATSAPP
 ══════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════
+   REGALO SORPRESA 🎁
+══════════════════════════════════════════════ */
+function renderRegalo() {
+  const container = document.getElementById('regalo-list');
+  if (!container) return;
+
+  if (!misiones.length) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">🎁</div>
+        <div class="empty-state-text">No hay ningún regalo secreto activo</div>
+        <div class="empty-state-sub">Creá uno con el botón de arriba</div>
+      </div>`;
+    return;
+  }
+
+  container.innerHTML = misiones.map(m => {
+    const festejada  = { nombre: m.festejada_nombre || (window.chicas.find(c=>c.id===m.festejada_id)?.nombre) || '–' };
+    const pct        = m.monto_objetivo > 0 ? Math.min(100, Math.round(parseFloat(m.recaudado)/parseFloat(m.monto_objetivo)*100)) : 0;
+    const falta      = m.monto_objetivo > 0 ? Math.max(0, parseFloat(m.monto_objetivo)-parseFloat(m.recaudado)) : 0;
+
+    const aportesHtml = (m.aportes||[]).map(a => `
+      <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:0.5px solid var(--border);">
+        <div class="fin-av" style="width:24px;height:24px;font-size:9px;background:${a.bg_color};color:${a.color};">${(a.apodo||'?').slice(0,2)}</div>
+        <div style="flex:1;font-size:12px;color:var(--text);">${a.nombre}</div>
+        <div style="font-size:12px;font-weight:500;color:var(--teal-d);">$${parseFloat(a.monto).toLocaleString('es-AR')}</div>
+        <button onclick="editarAporte(${m.id},${a.chica_id},${a.monto})" style="background:none;border:none;cursor:pointer;font-size:11px;color:var(--text-ter);">✏️</button>
+      </div>`).join('');
+
+    const opcionesHtml = (m.opciones||[]).map(o => {
+      const pctV = (m.opciones.reduce((a,x)=>a+(x.votos||0),0)) > 0
+        ? Math.round((o.votos||0) / m.opciones.reduce((a,x)=>a+(x.votos||0),0) * 100) : 0;
+      return `
+        <div style="padding:8px 0;border-bottom:0.5px solid var(--border);">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div style="flex:1;">
+              <div style="font-size:12px;font-weight:500;color:var(--text);">${o.nombre}</div>
+              ${o.descripcion?`<div style="font-size:11px;color:var(--text-sec);">${o.descripcion}</div>`:''}
+              ${o.precio_est?`<div style="font-size:11px;color:var(--teal-d);">~$${parseFloat(o.precio_est).toLocaleString('es-AR')}</div>`:''}
+              ${o.link?`<a href="${o.link}" target="_blank" style="font-size:10px;color:var(--blue-d);">🔗 Ver</a>`:''}
+            </div>
+            <div style="font-size:11px;color:var(--text-sec);min-width:40px;text-align:right;">${o.votos||0} ❤️</div>
+            <button onclick="votarOpcionRegalo(${o.id})" style="background:var(--pink-l);border:none;border-radius:8px;padding:4px 8px;font-size:11px;color:var(--pink-d);cursor:pointer;">Votar</button>
+          </div>
+          <div style="height:3px;border-radius:3px;background:var(--border);margin-top:5px;overflow:hidden;">
+            <div style="height:100%;border-radius:3px;background:var(--pink);width:${pctV}%;transition:width 0.4s;"></div>
+          </div>
+        </div>`;
+    }).join('');
+
+    return `
+      <div class="card" style="margin-bottom:0.85rem;">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:0.75rem;">
+          <div style="flex:1;">
+            <div style="font-family:var(--fd);font-size:16px;color:var(--text);">🎁 ${m.nombre}</div>
+            ${m.descripcion?`<div style="font-size:12px;color:var(--text-sec);margin-top:2px;">${m.descripcion}</div>`:''}
+            <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;">
+              <span class="fin-badge" style="background:var(--pink-l);color:var(--pink-d);">🎁 Para: ${festejada.nombre}</span>
+              ${m.fecha_limite?`<span class="fin-badge" style="background:var(--amber-l);color:var(--amber-d);">📅 ${formatFecha(m.fecha_limite)}</span>`:''}
+              <span class="fin-badge" style="background:var(--teal-l);color:var(--teal-d);">👯 ${m.aportantes} aportaron</span>
+            </div>
+          </div>
+          <button onclick="openEditMision(${m.id})" class="icon-btn e">✏️</button>
+        </div>
+
+        ${m.monto_objetivo > 0 ? `
+          <div style="margin-bottom:0.75rem;">
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-sec);margin-bottom:4px;">
+              <span>Recaudado: <strong>$${parseFloat(m.recaudado).toLocaleString('es-AR')}</strong></span>
+              <span>Objetivo: <strong>$${parseFloat(m.monto_objetivo).toLocaleString('es-AR')}</strong></span>
+            </div>
+            <div style="height:6px;border-radius:6px;background:var(--border);overflow:hidden;">
+              <div style="height:100%;border-radius:6px;background:var(--teal);width:${pct}%;transition:width 0.5s;"></div>
+            </div>
+            <div style="font-size:11px;color:${falta>0?'var(--hot-d)':'var(--teal-d)'};margin-top:3px;">
+              ${falta>0?`Faltan $${falta.toLocaleString('es-AR')}`:'🎉 ¡Objetivo alcanzado!'}
+            </div>
+          </div>` : ''}
+
+        <button class="fin-add-btn" style="margin-bottom:0.5rem;" onclick="openAporte(${m.id})">
+          💰 Registrar aporte
+        </button>
+
+        ${aportesHtml ? `<div style="margin-bottom:0.75rem;">${aportesHtml}</div>` : ''}
+
+        <div style="font-family:var(--fd);font-size:14px;color:var(--text);margin-bottom:0.5rem;">Ideas de regalo</div>
+        ${opcionesHtml || '<div style="font-size:12px;color:var(--text-ter);padding:6px 0;">Sin opciones todavía</div>'}
+        <button class="add-opt-btn" style="margin-top:6px;border-radius:10px;" onclick="openAddOpcionRegalo(${m.id})">
+          + Agregar idea de regalo
+        </button>
+      </div>`;
+  }).join('');
+}
+
+function openNuevaMision() {
+  openModal(`
+    <div class="modal-title">🎁 Nuevo regalo secreto</div>
+    <label class="field-label">Nombre del regalo</label>
+    <input class="field-input" id="rm-nombre" placeholder="Ej: Regalo cumple Agos">
+    <label class="field-label">Descripción</label>
+    <input class="field-input" id="rm-desc" placeholder="Detalles...">
+    <label class="field-label">¿Para quién es el regalo?</label>
+    <input class="field-input" id="rm-festejada" placeholder="Ej: Mamá de Andrea, Romi, la profe...">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <div>
+        <label class="field-label">Monto objetivo</label>
+        <input class="field-input" id="rm-monto" type="number" placeholder="0">
+      </div>
+      <div>
+        <label class="field-label">Fecha límite</label>
+        <input class="field-input" id="rm-fecha" type="date">
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+      <button class="btn-save" onclick="guardarMision()">Crear 🎁</button>
+    </div>`);
+}
+
+async function guardarMision(id) {
+  const nombre     = document.getElementById('rm-nombre').value.trim();
+  if (!nombre) return;
+  const payload = {
+    nombre,
+    descripcion:      document.getElementById('rm-desc').value.trim(),
+    festejada_nombre: document.getElementById('rm-festejada').value.trim()||null,
+    festejada_id:     null,
+    monto_objetivo:   parseFloat(document.getElementById('rm-monto').value)||null,
+    fecha_limite:     document.getElementById('rm-fecha').value||null,
+  };
+  if (id) await put(`/misiones/${id}`, payload);
+  else     await post('/misiones', payload);
+  closeModal();
+  await loadRegalo();
+}
+
+function openEditMision(id) {
+  const m = misiones.find(m=>m.id===id);
+  if (!m) return;
+  openModal(`
+    <div class="modal-title">Editar regalo</div>
+    <label class="field-label">Nombre</label>
+    <input class="field-input" id="rm-nombre" value="${m.nombre}">
+    <label class="field-label">Descripción</label>
+    <input class="field-input" id="rm-desc" value="${m.descripcion||''}">
+    <label class="field-label">¿Para quién es el regalo?</label>
+    <input class="field-input" id="rm-festejada" value="${m.festejada_nombre||m.festejada_id||''}" placeholder="Nombre de la festejada">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <div>
+        <label class="field-label">Monto objetivo</label>
+        <input class="field-input" id="rm-monto" type="number" value="${m.monto_objetivo||''}">
+      </div>
+      <div>
+        <label class="field-label">Fecha límite</label>
+        <input class="field-input" id="rm-fecha" type="date" value="${m.fecha_limite?String(m.fecha_limite).slice(0,10):''}">
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-danger" onclick="archivarMision(${id})">Archivar</button>
+      <button class="btn-save"   onclick="guardarMision(${id})">Guardar</button>
+    </div>`);
+}
+
+async function archivarMision(id) {
+  await del(`/misiones/${id}`);
+  closeModal();
+  await loadRegalo();
+}
+
+function openAporte(misionId) {
+  const m = misiones.find(m=>m.id===misionId);
+  openModal(`
+    <div class="modal-title">💰 Registrar aporte</div>
+    <div style="font-size:13px;color:var(--text-sec);margin-bottom:1rem;">Regalo: <strong>${m?.nombre||''}</strong></div>
+    <label class="field-label">¿Quién aporta?</label>
+    <select class="field-input" id="ap-chica">
+      ${window.chicas.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('')}
+    </select>
+    <label class="field-label">Monto</label>
+    <input class="field-input" id="ap-monto" type="number" placeholder="0" min="0">
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+      <button class="btn-save"   onclick="guardarAporte(${misionId})">Guardar</button>
+    </div>`);
+}
+
+function editarAporte(misionId, chicaId, montoActual) {
+  const m = misiones.find(m=>m.id===misionId);
+  const c = window.chicas.find(c=>c.id===chicaId);
+  openModal(`
+    <div class="modal-title">✏️ Editar aporte</div>
+    <div style="font-size:13px;color:var(--text-sec);margin-bottom:1rem;"><strong>${c?.nombre}</strong> en "${m?.nombre}"</div>
+    <label class="field-label">Monto</label>
+    <input class="field-input" id="ap-monto" type="number" value="${montoActual}" min="0">
+    <div class="modal-btns">
+      <button class="btn-danger" onclick="eliminarAporte(${misionId},${chicaId})">Eliminar</button>
+      <button class="btn-save"   onclick="guardarAporteEdit(${misionId},${chicaId})">Guardar</button>
+    </div>`);
+}
+
+async function guardarAporte(misionId) {
+  const chica_id = parseInt(document.getElementById('ap-chica').value);
+  const monto    = parseFloat(document.getElementById('ap-monto').value);
+  if (!monto || monto<=0) return;
+  await post('/misiones/aporte', { mision_id:misionId, chica_id, monto });
+  closeModal();
+  await loadRegalo();
+}
+
+async function guardarAporteEdit(misionId, chicaId) {
+  const monto = parseFloat(document.getElementById('ap-monto').value);
+  if (!monto || monto<=0) return;
+  await post('/misiones/aporte', { mision_id:misionId, chica_id:chicaId, monto });
+  closeModal();
+  await loadRegalo();
+}
+
+async function eliminarAporte(misionId, chicaId) {
+  await post('/misiones/aporte/delete', { mision_id:misionId, chica_id:chicaId });
+  closeModal();
+  await loadRegalo();
+}
+
+function openAddOpcionRegalo(misionId) {
+  openModal(`
+    <div class="modal-title">💡 Idea de regalo</div>
+    <label class="field-label">Nombre</label>
+    <input class="field-input" id="or-nombre" placeholder="Ej: Perfume Chanel N°5">
+    <label class="field-label">Descripción</label>
+    <input class="field-input" id="or-desc" placeholder="Detalles...">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <div>
+        <label class="field-label">Precio estimado</label>
+        <input class="field-input" id="or-precio" type="number" placeholder="0">
+      </div>
+      <div>
+        <label class="field-label">Link (opcional)</label>
+        <input class="field-input" id="or-link" placeholder="https://...">
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+      <button class="btn-save"   onclick="guardarOpcionRegalo(${misionId})">Agregar</button>
+    </div>`);
+}
+
+async function guardarOpcionRegalo(misionId) {
+  const nombre = document.getElementById('or-nombre').value.trim();
+  if (!nombre) return;
+  await post('/misiones/opcion', {
+    mision_id:   misionId,
+    nombre,
+    descripcion: document.getElementById('or-desc').value.trim(),
+    precio_est:  parseFloat(document.getElementById('or-precio').value)||null,
+    link:        document.getElementById('or-link').value.trim()||null,
+  });
+  closeModal();
+  await loadRegalo();
+}
+
+async function votarOpcionRegalo(opcionId) {
+  await post('/misiones/voto', { opcion_id:opcionId, chica_id:1 }); // TODO: chica actual
+  await loadRegalo();
+}
+
+/* ══════════════════════════════════════════════
+   ENCUESTAS POR EVENTO
+══════════════════════════════════════════════ */
+let encuestasEventoActual = null;
+
+function abrirEncuestas(eventoId, eventoNombre) {
+  encuestasEventoActual = eventoId;
+  openModal(`
+    <div class="modal-title">🗳️ Encuestas · ${eventoNombre}</div>
+    <div id="encuestas-modal-list" style="min-height:80px;">
+      <div style="text-align:center;padding:1rem;font-size:12px;color:var(--text-ter);">Cargando...</div>
+    </div>
+    <button class="fin-add-btn" style="margin-top:0.5rem;" onclick="openNuevaEncuesta(${eventoId})">
+      + Nueva encuesta
+    </button>`);
+  cargarEncuestasModal(eventoId);
+}
+
+async function cargarEncuestasModal(eventoId) {
+  try {
+    const encuestas = await get(`/encuestas/${eventoId}`);
+    polls = {};
+    encuestas.forEach(e => { polls[e.id] = e; });
+    const list = document.getElementById('encuestas-modal-list');
+    if (!list) return;
+    if (!encuestas.length) {
+      list.innerHTML = '<div style="text-align:center;padding:1rem;font-size:12px;color:var(--text-ter);">Sin encuestas. ¡Creá una!</div>';
+      return;
+    }
+    list.innerHTML = encuestas.map(p => {
+      const total = (p.opciones||[]).reduce((a,o)=>a+(o.votos||0),0);
+      return `
+        <div style="padding:10px 0;border-bottom:0.5px solid var(--border);">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+            <div style="font-size:13px;font-weight:500;color:var(--text);">${p.titulo}</div>
+            <span style="font-size:10px;color:var(--text-ter);">${total} votos</span>
+          </div>
+          ${(p.opciones||[]).map(o => {
+            const pct = total>0?Math.round((o.votos||0)/total*100):0;
+            return `
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;cursor:pointer;" onclick="votarEncuesta(${p.id},${o.id})">
+                <div style="flex:1;font-size:12px;color:var(--text);">${o.nombre}</div>
+                <div style="font-size:11px;color:var(--text-sec);min-width:28px;text-align:right;">${pct}%</div>
+                <div style="width:60px;height:4px;border-radius:4px;background:var(--border);overflow:hidden;">
+                  <div style="height:100%;border-radius:4px;background:var(--teal);width:${pct}%;"></div>
+                </div>
+              </div>`;
+          }).join('')}
+          <button class="add-opt-btn" style="margin-top:4px;border-radius:8px;" onclick="openAddOpcionEncuesta(${p.id})">+ Opción</button>
+        </div>`;
+    }).join('');
+  } catch(e) { console.warn(e); }
+}
+
+async function votarEncuesta(encId, optId) {
+  polls[encId]._myVote = optId;
+  try { await post('/votos', { opcion_id:optId, chica_id:1 }); } catch(e) {}
+  if (encuestasEventoActual) cargarEncuestasModal(encuestasEventoActual);
+}
+
+function openNuevaEncuesta(eventoId) {
+  openModal(`
+    <div class="modal-title">Nueva encuesta</div>
+    <label class="field-label">Título</label>
+    <input class="field-input" id="enc-titulo" placeholder="Ej: ¿Qué día preferís?">
+    <label class="field-label">Pregunta</label>
+    <input class="field-input" id="enc-pregunta" placeholder="Detalles...">
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+      <button class="btn-save" onclick="crearEncuestaManual(${eventoId})">Crear</button>
+    </div>`);
+}
+
+async function crearEncuestaManual(eventoId) {
+  const titulo = document.getElementById('enc-titulo').value.trim();
+  if (!titulo) return;
+  await post('/encuestas', {
+    evento_id: eventoId,
+    titulo,
+    pregunta: document.getElementById('enc-pregunta').value.trim(),
+    tipo: 'opcion_unica'
+  });
+  closeModal();
+  setTimeout(() => abrirEncuestas(eventoId, ''), 100);
+}
+
+async function openAddOpcionEncuesta(encId) {
+  openModal(`
+    <div class="modal-title">Nueva opción</div>
+    <label class="field-label">Nombre</label>
+    <input class="field-input" id="oe-nombre" placeholder="Ej: Sábado 15">
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+      <button class="btn-save" onclick="agregarOpcionEncuesta(${encId})">Agregar</button>
+    </div>`);
+}
+
+async function agregarOpcionEncuesta(encId) {
+  const nombre = document.getElementById('oe-nombre').value.trim();
+  if (!nombre) return;
+  await post('/encuestas/opcion', { encuesta_id:encId, nombre });
+  closeModal();
+  if (encuestasEventoActual) setTimeout(() => abrirEncuestas(encuestasEventoActual, ''), 100);
+}
+
 function shareWhatsApp(type, eventoId) {
   const rio    = eventos.find(e=>e.tipo==='viaje');
   const spa    = eventos.find(e=>e.tipo==='spa');
@@ -1573,6 +1946,7 @@ async function init() {
       renderHome(),
       loadFinanzas(),
       loadPolls(),
+      loadRegalo(),
     ]);
 
     // Renders sincrónicos

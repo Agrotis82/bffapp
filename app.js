@@ -283,8 +283,71 @@ async function votarOpcionRegalo(opcionId){await post('/misiones/voto',{opcion_i
 function renderBdayBanner(){const banner=document.getElementById('bday-banner');if(!banner)return;const up=window.chicas.map(c=>({...c,days:daysUntilBday(c.bday)})).filter(c=>c.days<=30).sort((a,b)=>a.days-b.days);if(!up.length){banner.style.display='none';return;}banner.style.display='flex';banner.innerHTML=`<div style="font-size:18px;">🎂</div><div class="bday-text">Próximos: ${up.map(c=>`<strong>${c.nombre}</strong> (${c.days===0?'¡hoy!':c.days===1?'mañana':`en ${c.days}d`})`).join(' · ')}</div>`;}
 function renderChicas(filter=''){const list=document.getElementById('chicas-list');if(!list)return;const filtered=window.chicas.filter(c=>c.nombre.toLowerCase().includes(filter.toLowerCase())||(c.apodo||'').toLowerCase().includes(filter.toLowerCase()));list.innerHTML=filtered.length?filtered.map(c=>{const d=daysUntilBday(c.bday);return`<div class="chica-card" onclick="openEditChica(${c.id})"><div class="chica-av ${d<=7?'bday-ring':''}" style="background:${c.bg_color};color:${c.color};">${(c.apodo||c.nombre).slice(0,2)}</div><div style="flex:1;"><div class="chica-name">${c.nombre}</div><div class="chica-apodo">"${c.apodo||''}" · 🎂 ${bdayLabel(c.bday)}</div><div class="chica-meta">${d<=7?'<span class="meta-chip chip-bday">🎂 Pronto</span>':''}</div></div><div class="chica-edit-btn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></div></div>`;}).join(''):'<div style="text-align:center;padding:2rem;color:var(--text-ter);font-size:13px;">No se encontró ninguna</div>';if(document.getElementById('chicas-sub'))document.getElementById('chicas-sub').textContent=`${window.chicas.length} chicas`;if(document.getElementById('total-chicas'))document.getElementById('total-chicas').textContent=window.chicas.length;}
 function filterChicas(val){renderChicas(val);}
-function openEditChica(id){const c=window.chicas.find(c=>c.id===id);if(!c)return;openModal(`<div class="modal-av" style="background:${c.bg_color};color:${c.color};">${(c.apodo||c.nombre).slice(0,2)}</div><div class="modal-name-center">${c.nombre}</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;"><div><label class="field-label">Nombre</label><input class="field-input" id="m-nombre" value="${c.nombre}"></div><div><label class="field-label">Apodo</label><input class="field-input" id="m-apodo" value="${c.apodo||''}"></div></div><label class="field-label">Teléfono</label><div style="display:flex;gap:8px;align-items:center;"><input class="field-input" id="m-tel" value="${c.telefono||''}" style="flex:1;"><button class="wa-contact-btn" onclick="openWA('${c.telefono||''}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>Abrir</button></div><label class="field-label">Cumpleaños</label><input class="field-input" id="m-bday" type="date" value="${cleanDate(c.bday)||''}"><div class="modal-btns"><button class="btn-cancel" onclick="closeModal()">Cancelar</button><button class="btn-save" onclick="saveChicaDB(${c.id})">Guardar</button></div>`);}
+function openAddChica(){
+  openModal(`
+    <div class="modal-title">Nueva amiga 💅</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <div><label class="field-label">Nombre</label><input class="field-input" id="m-nombre" placeholder="Nombre completo"></div>
+      <div><label class="field-label">Apodo</label><input class="field-input" id="m-apodo" placeholder="Apodo"></div>
+    </div>
+    <label class="field-label">Teléfono / WhatsApp</label>
+    <input class="field-input" id="m-tel" placeholder="+54911...">
+    <label class="field-label">Cumpleaños</label>
+    <input class="field-input" id="m-bday" type="date">
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+      <button class="btn-save" onclick="guardarNuevaChica()">Agregar 💅</button>
+    </div>`);
+}
+
+async function guardarNuevaChica(){
+  const nombre=document.getElementById('m-nombre').value.trim();
+  if(!nombre) return;
+  const nueva = await post('/chicas',{
+    nombre,
+    apodo:    document.getElementById('m-apodo').value.trim(),
+    telefono: document.getElementById('m-tel').value.trim(),
+    bday:     document.getElementById('m-bday').value||null,
+  });
+  window.chicas.push(nueva);
+  window.chicas.sort((a,b)=>a.nombre.localeCompare(b.nombre));
+  closeModal();
+  renderChicas();
+  renderBdayBanner();
+  renderHome();
+}
+
+function openEditChica(id){const c=window.chicas.find(c=>c.id===id);if(!c)return;openModal(`<div class="modal-av" style="background:${c.bg_color};color:${c.color};">${(c.apodo||c.nombre).slice(0,2)}</div><div class="modal-name-center">${c.nombre}</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;"><div><label class="field-label">Nombre</label><input class="field-input" id="m-nombre" value="${c.nombre}"></div><div><label class="field-label">Apodo</label><input class="field-input" id="m-apodo" value="${c.apodo||''}"></div></div><label class="field-label">Teléfono</label><div style="display:flex;gap:8px;align-items:center;"><input class="field-input" id="m-tel" value="${c.telefono||''}" style="flex:1;"><button class="wa-contact-btn" onclick="openWA('${c.telefono||''}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>Abrir</button></div><label class="field-label">Cumpleaños</label><input class="field-input" id="m-bday" type="date" value="${cleanDate(c.bday)||''}"><div class="modal-btns"><button class="btn-danger" onclick="confirmEliminarChica(${c.id})">Eliminar</button><button class="btn-save" onclick="saveChicaDB(${c.id})">Guardar</button></div>`);}
 async function saveChicaDB(id){const nombre=document.getElementById('m-nombre').value.trim();await put(`/chicas/${id}`,{nombre,apodo:document.getElementById('m-apodo').value.trim(),telefono:document.getElementById('m-tel').value.trim(),bday:document.getElementById('m-bday').value});const c=window.chicas.find(c=>c.id===id);if(c){c.nombre=nombre;c.apodo=document.getElementById('m-apodo').value.trim();c.telefono=document.getElementById('m-tel').value.trim();c.bday=document.getElementById('m-bday').value;}closeModal();renderBdayBanner();renderChicas(document.getElementById('search-input')?.value||'');}
+async function confirmEliminarChica(id){
+  const c=window.chicas.find(c=>c.id===id);
+  openModal(`
+    <div class="modal-title">¿Eliminar a ${c?.nombre}?</div>
+    <div style="font-size:13px;color:var(--text-sec);margin-bottom:1rem;">
+      Si tiene gastos o aportes registrados, no se puede eliminar para mantener el historial.
+    </div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+      <button class="btn-danger" style="flex:2;" onclick="eliminarChica(${id})">Sí, eliminar</button>
+    </div>`);
+}
+
+async function eliminarChica(id){
+  const res = await del(`/chicas/${id}`);
+  if(res.success){
+    window.chicas = window.chicas.filter(c=>c.id!==id);
+    closeModal();
+    renderChicas();
+    renderHome();
+  } else {
+    closeModal();
+    openModal(`
+      <div class="modal-title">No se puede eliminar</div>
+      <div style="font-size:13px;color:var(--text-sec);margin-bottom:1rem;">${res.message}</div>
+      <div class="modal-btns"><button class="btn-save" onclick="closeModal()">Entendido</button></div>`);
+  }
+}
+
 function openWA(tel){if(tel)window.open('https://wa.me/'+tel.replace(/\D/g,''),'_blank');}
 
 /* ══ WHATSAPP ══ */

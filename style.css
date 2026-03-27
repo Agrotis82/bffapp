@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;0,700;1,600&family=DM+Sans:wght@400;500&display=swap');
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -26,7 +26,7 @@
   --border:    #E8E0F5;
   --border-med:#C4B8E8;
 
-  --fd: 'Playfair Display', serif;
+  --fd: 'Cormorant Garamond', serif;
   --fb: 'DM Sans', sans-serif;
 }
 

@@ -834,8 +834,8 @@ function _openGastoModal(prefill) {
       <div>
         <label class="field-label">Moneda</label>
         <div style="display:flex;gap:6px;">
-          <button class="moneda-btn ${selMon==='USD'?'sel':''}" id="fg-usd" onclick="finSelMon('USD')">USD</button>
-          <button class="moneda-btn ${selMon==='ARS'?'sel':''}" id="fg-ars" onclick="finSelMon('ARS')">ARS</button>
+          <button class="moneda-btn ${selMon==='USD'?'on':''}" id="fg-usd" onclick="finSelMon('USD')">USD</button>
+          <button class="moneda-btn ${selMon==='ARS'?'on':''}" id="fg-ars" onclick="finSelMon('ARS')">ARS</button>
         </div>
       </div>
     </div>
@@ -898,8 +898,8 @@ function finSelCat(id, color) {
 }
 function finSelMon(mon) {
   finState.selMon = mon;
-  document.getElementById('fg-usd')?.classList.toggle('sel', mon==='USD');
-  document.getElementById('fg-ars')?.classList.toggle('sel', mon==='ARS');
+  document.getElementById('fg-usd')?.classList.toggle('on', mon==='USD');
+  document.getElementById('fg-ars')?.classList.toggle('on', mon==='ARS');
   finUpdatePreview();
 }
 function finToggleSplit(id) {

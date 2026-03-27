@@ -356,7 +356,35 @@ function shareWhatsApp(type,eventoId){
   function buildMsg(){switch(type){
     case 'general':{const p=[...eventos].sort((a,b)=>new Date(a.fecha_inicio||'9999')-new Date(b.fecha_inicio||'9999'))[0];let m=`👯‍♀️ *BFFapp - Las Amigas* 💅\n\n`;eventos.forEach(e=>{const t=TIPOS[e.tipo]||TIPOS.otro;m+=`${t.icon} ${e.nombre}`;if(e.fecha_inicio)m+=` · ${formatFecha(e.fecha_inicio)}`;m+=`\n`;});if(p?.hotel||p?.lugar)m+=`\n🏨 ${p.hotel||p.lugar}\n`;m+=`\n🔗 bffapp-lasamigas.netlify.app`;return m;}
     case 'itinerario':{let m=`✈️ *Itinerario ${rio?.nombre||'Viaje'}*\n`;if(rio?.fecha_inicio)m+=`📅 ${formatFecha(rio.fecha_inicio)}`;if(rio?.fecha_fin)m+=` → ${formatFecha(rio.fecha_fin)}`;m+=`\n`;if(rio?.hotel||rio?.lugar)m+=`🏨 ${rio.hotel||rio.lugar}\n`;m+=`\n`;days.forEach(d=>{m+=`📅 *Día ${d.numero_dia} — ${d.titulo}*\n`;(d.actividades||[]).forEach(a=>m+=`• ${a.momento?a.momento+': ':''}${a.nombre}\n`);m+=`\n`;});m+=`🔗 bffapp-lasamigas.netlify.app`;return m;}
-    case 'pagos':{let m=`💸 *Gastos - Las Amigas*\n\n`;['USD','ARS'].forEach(moneda=>{const gm=gastos.filter(g=>g.moneda===moneda);if(!gm.length)return;m+=`*— ${moneda} —*\n`;gm.forEach(g=>{const pg=window.chicas.find(c=>c.id===g.pagado_por);m+=`• ${g.nombre}: *${fmt(g.monto,moneda)}*`;if(pg)m+=` (${pg.nombre})`;if(g.solo_registro)m+=` 📌`;else if(g.saldado)m+=` ✅`;m+=`\n`;});m+=`*Total: ${fmt(gm.reduce((a,g)=>a+parseFloat(g.monto),0),moneda)}*\n\n`;});if(deudas.length){m+=`💸 *Deudas pendientes:*\n`;deudas.forEach(t=>m+=`• ${t.de_chica?.nombre} → ${t.para_chica?.nombre}: *${fmt(t.monto,mon)}*\n`);m+=`\n¡Recuerden transferir! 🙏`;}else m+=`✅ ¡Todo saldado!`;return m;}
+    case 'pagos':{
+      const eventoNombre = eventos.find(e=>e.id===finState.eventoId)?.nombre || 'Evento';
+      let m = '';
+      ['USD','ARS'].forEach(moneda=>{
+        const gm = (finState.gastosAll||gastos).filter(g=>g.moneda===moneda);
+        if(!gm.length) return;
+        m += `💸 *Gastos registrados - ${eventoNombre}*\n\n`;
+        gm.forEach(g=>{
+          const pg = window.chicas.find(c=>c.id===g.pagado_por);
+          const cat = getCatFin(g.categoria?.split(',')[0]);
+          m += `${cat.icon} ${g.nombre}: *${fmt(g.monto,moneda)}*`;
+          if(pg) m += ` (${pg.nombre})`;
+          if(g.solo_registro) m += ` 📌`;
+          else if(g.saldado)  m += ` ✅`;
+          m += `\n`;
+        });
+        const totalReg = gm.reduce((a,g)=>a+parseFloat(g.monto),0);
+        const deudasMon = (finState.deudas||[]).filter(t=>t.monto>0);
+        if(deudasMon.length){
+          m += `\n💸 *Deudas pendientes:*\n`;
+          deudasMon.forEach(t=>m+=`• ${t.de_chica?.nombre} → ${t.para_chica?.nombre}: *${fmt(t.monto,moneda)}*\n`);
+          m += `\n¡Recuerden transferir antes del viaje! 🙏\n`;
+        } else {
+          m += `\n✅ ¡Todo saldado!\n`;
+        }
+        m += `\n*Total registrado: ${fmt(totalReg,moneda)}*`;
+      });
+      return m || `💸 Sin gastos registrados todavía.`;
+    }
     case 'evento':{const e=eventos.find(e=>e.id===eventoId);if(!e)return'';const t=TIPOS[e.tipo]||TIPOS.otro;let m=`${t.icon} *${e.nombre}*\n\n`;if(e.fecha_inicio)m+=`📅 ${formatFecha(e.fecha_inicio)}${e.fecha_fin?' → '+formatFecha(e.fecha_fin):''}\n`;if(e.hotel||e.lugar)m+=`📍 ${e.hotel||e.lugar}\n`;m+=`\n🔗 bffapp-lasamigas.netlify.app`;return m;}
     default:return `👯‍♀️ *BFFapp - Las Amigas*\n🔗 bffapp-lasamigas.netlify.app`;
   }}

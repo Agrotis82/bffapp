@@ -52,7 +52,7 @@ const CATS_FIN = [
 let finState = {
   eventoId: null, moneda: 'USD',
   gastos: [], totales: [], deudas: [], balance: [],
-  editingGasto: null, selCat: 'alojamiento',
+  editingGasto: null, selCats: ['alojamiento'],
   selSplit: [], selMon: 'USD',
 };
 
@@ -168,7 +168,7 @@ function goTo(screen) {
    MODAL
 ══════════════════════════════════════════════ */
 function openModal(html) {
-  document.getElementById('modal-inner').innerHTML = `<div class="modal-handle"></div>${html}`;
+  document.getElementById('modal-inner').innerHTML = `<div class="modal-handle"></div><button onclick="closeModal()" style="position:absolute;top:1rem;right:1.25rem;background:none;border:none;font-size:22px;cursor:pointer;color:var(--text-ter);line-height:1;padding:0;">×</button>${html}`;
   document.getElementById('modal').style.display = 'flex';
 }
 function closeModal() {
@@ -679,7 +679,8 @@ function renderFinStats() {
   const total     = parseFloat(t.total    ||0);
   const saldado   = parseFloat(t.saldado  ||0);
   const pendiente = parseFloat(t.pendiente||0);
-  const nMax      = Math.max(...finState.gastos.map(g=>g.participantes?.length||1), 1);
+  const divGastos = finState.gastos.filter(g => !g.solo_registro);
+  const nMax      = Math.max(...divGastos.map(g=>g.participantes?.length||1), 1);
   const xPerson   = nMax > 0 ? total/nMax : 0;
   const pct       = total > 0 ? Math.round(saldado/total*100) : 0;
 
@@ -703,7 +704,8 @@ function renderFinGastos() {
     return;
   }
   list.innerHTML = gastos.map(g => {
-    const cat   = getCatFin(g.categoria);
+    const cats  = g.categoria ? g.categoria.split(',') : ['otro'];
+    const cat   = getCatFin(cats[0]);
     const parte = g.participantes?.length > 0 ? parseFloat(g.monto)/g.participantes.length : 0;
     const avs   = (g.participantes||[]).slice(0,5).map(p =>
       `<div style="width:18px;height:18px;border-radius:50%;background:${p.bg_color};color:${p.color};font-size:8px;font-weight:500;display:inline-flex;align-items:center;justify-content:center;border:1.5px solid var(--card-bg);margin-left:-4px;">${(p.apodo||'?').slice(0,2)}</div>`
@@ -719,7 +721,7 @@ function renderFinGastos() {
             <div style="display:inline-flex;margin-left:4px;">${avs}</div>
           </div>
           <div style="display:flex;gap:4px;margin-top:3px;flex-wrap:wrap;">
-            <span class="fin-badge" style="background:${cat.bg};color:${cat.color};">${cat.label}</span>
+            ${cats.map(cid => { const cc = getCatFin(cid); return `<span class="fin-badge" style="background:${cc.bg};color:${cc.color};">${cc.icon} ${cc.label}</span>`; }).join('')}
             ${g.solo_registro
               ? '<span class="fin-badge" style="background:var(--purple-l);color:var(--purple-d);">📌 Solo registro</span>'
               : g.saldado
@@ -804,7 +806,7 @@ function finToggleMoneda(mon) {
 /* ── Modal gasto ── */
 function openAddGasto() {
   finState.editingGasto = null;
-  finState.selCat   = 'alojamiento';
+  finState.selCats  = ['alojamiento'];
   finState.selSplit = window.chicas.map(c=>c.id);
   finState.selMon   = finState.moneda;
   _openGastoModal();
@@ -814,14 +816,14 @@ function openEditGasto(id) {
   const g = finState.gastos.find(g=>g.id===id);
   if (!g) return;
   finState.editingGasto = g;
-  finState.selCat   = g.categoria;
+  finState.selCats  = g.categoria ? (Array.isArray(g.categoria) ? g.categoria : [g.categoria]) : ['otro'];
   finState.selSplit = (g.participantes||[]).map(p=>p.chica_id);
   finState.selMon   = g.moneda;
   _openGastoModal(g);
 }
 
 function _openGastoModal(prefill) {
-  const { selCat, selSplit, selMon } = finState;
+  const { selCats, selSplit, selMon } = finState;
   openModal(`
     <div class="modal-title">${prefill ? 'Editar gasto' : 'Registrar gasto'}</div>
     <label class="field-label">Descripción</label>
@@ -842,8 +844,8 @@ function _openGastoModal(prefill) {
     <label class="field-label">Categoría</label>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px;">
       ${CATS_FIN.map(c=>`
-        <div class="cat-opt ${c.id===selCat?'sel':''}" id="fgcat-${c.id}"
-             style="${c.id===selCat?`border-color:${c.color};background:var(--surface);`:''}"
+        <div class="cat-opt ${selCats.includes(c.id)?'sel':''}" id="fgcat-${c.id}"
+             style="${selCats.includes(c.id)?`border-color:${c.color};background:var(--surface);`:''}"
              onclick="finSelCat('${c.id}','${c.color}')">
           <div style="font-size:18px;text-align:center;">${c.icon}</div>
           <div style="font-size:10px;font-weight:500;color:var(--text-sec);text-align:center;">${c.label}</div>
@@ -891,10 +893,27 @@ function _openGastoModal(prefill) {
 }
 
 function finSelCat(id, color) {
-  finState.selCat = id;
-  document.querySelectorAll('[id^="fgcat-"]').forEach(el=>{el.classList.remove('sel');el.style.borderColor='';el.style.background='';});
-  const el = document.getElementById('fgcat-'+id);
-  if (el) { el.classList.add('sel'); el.style.borderColor=color; el.style.background='var(--surface)'; }
+  const cats = finState.selCats;
+  if (cats.includes(id)) {
+    if (cats.length === 1) return; // keep at least one
+    finState.selCats = cats.filter(c => c !== id);
+  } else {
+    finState.selCats = [...cats, id];
+  }
+  // re-render all cat buttons
+  CATS_FIN.forEach(c => {
+    const el = document.getElementById('fgcat-'+c.id);
+    if (!el) return;
+    if (finState.selCats.includes(c.id)) {
+      el.classList.add('sel');
+      el.style.borderColor = c.color;
+      el.style.background = 'var(--surface)';
+    } else {
+      el.classList.remove('sel');
+      el.style.borderColor = '';
+      el.style.background = '';
+    }
+  });
 }
 function finSelMon(mon) {
   finState.selMon = mon;
@@ -946,7 +965,7 @@ async function saveGastoAPI() {
     evento_id:       finState.eventoId,
     nombre, monto,
     moneda:          finState.selMon,
-    categoria:       finState.selCat,
+    categoria:       finState.selCats.join(','),
     pagado_por:      pagadoPor,
     participantes:   soloReg ? [] : finState.selSplit,
     notas:           document.getElementById('fg-notas').value.trim(),

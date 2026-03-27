@@ -1004,6 +1004,9 @@ function waDeuda(de, para, monto, mon) {
 /* ══════════════════════════════════════════════
    POLLS / SPA
 ══════════════════════════════════════════════ */
+// expose polls globally for WhatsApp message
+function _exposePollsGlobal() { window._polls = polls; }
+
 async function loadPolls() {
   const spa = eventos.find(e=>e.tipo==='spa');
   if (!spa) return;
@@ -1011,6 +1014,7 @@ async function loadPolls() {
     const encuestas = await get(`/encuestas/${spa.id}`);
     polls = {};
     encuestas.forEach(e => { polls[e.id] = e; });
+    _exposePollsGlobal();
     renderPolls();
   } catch(e) { console.warn('Polls:', e); }
 }
@@ -1228,45 +1232,196 @@ function openWA(tel) {
    WHATSAPP
 ══════════════════════════════════════════════ */
 function shareWhatsApp(type, eventoId) {
-  const rio = eventos.find(e=>e.tipo==='viaje');
-  const msgs = {
-    general:    `👯‍♀️ *BFFapp - Las Amigas*\n\n📍 Planes activos: ${eventos.length}\n✈️ Próximo: ${eventos[0]?.nombre||'–'}\n\n¡Abrí la app para ver todos los detalles! 💅`,
-    resumen:    `👯‍♀️ *Resumen - Las Amigas*\n\n${eventos.map(e=>`${TIPOS[e.tipo]?.icon||'📍'} ${e.nombre} · ${e.fecha_inicio?formatFecha(e.fecha_inicio):'Fecha TBD'}`).join('\n')}\n\n💌 ¡Revisá la app! 🙏`,
-    itinerario: `✈️ *Itinerario ${rio?.nombre||'Viaje'}*\n${rio?.fecha_inicio?formatFecha(rio.fecha_inicio):''}\n\n`+days.map(d=>`📅 *Día ${d.numero_dia} - ${d.titulo}*\n`+(d.actividades||[]).map(a=>`• ${a.nombre}`).join('\n')).join('\n\n'),
-    pagos: (() => {
-      const deudas = finState.deudas;
-      const gastos = finState.gastos;
-      const mon    = finState.moneda;
-      let msg = `💸 *Resumen de gastos - BFFapp*\n`;
-      msg += `Moneda: ${mon}\n\n`;
-      if (gastos.length) {
-        msg += `📋 *Gastos registrados:*\n`;
-        gastos.filter(g=>g.moneda===mon).forEach(g => {
-          msg += `• ${g.nombre}: ${fmt(g.monto,mon)}`;
-          if (g.solo_registro) msg += ` _(solo registro)_`;
-          msg += `\n`;
+  const rio    = eventos.find(e=>e.tipo==='viaje');
+  const spa    = eventos.find(e=>e.tipo==='spa');
+  const mon    = finState.moneda || 'USD';
+  const gastos = finState.gastos || [];
+  const deudas = finState.deudas || [];
+
+  function buildMsg() {
+    switch(type) {
+
+      case 'general': {
+        const proximo = [...eventos].sort((a,b)=>new Date(a.fecha_inicio||'9999')-new Date(b.fecha_inicio||'9999'))[0];
+        let m = `👯‍♀️ *BFFapp - Las Amigas* 💅
+
+`;
+        m += `📍 *Nuestros planes:*
+`;
+        eventos.forEach(e => {
+          const t = TIPOS[e.tipo]||TIPOS.otro;
+          m += `${t.icon} ${e.nombre}`;
+          if (e.fecha_inicio) m += ` · ${formatFecha(e.fecha_inicio)}`;
+          m += `
+`;
         });
-        msg += `\n`;
+        if (proximo?.hotel||proximo?.lugar) m += `
+🏨 ${proximo.hotel||proximo.lugar}
+`;
+        m += `
+🔗 bffapp-lasamigas.netlify.app`;
+        return m;
       }
-      if (deudas.length) {
-        msg += `💸 *Quién le debe a quién:*\n`;
-        deudas.forEach(t => {
-          msg += `• ${t.de_chica?.nombre} → ${t.para_chica?.nombre}: ${fmt(t.monto,mon)}\n`;
+
+      case 'resumen': {
+        let m = `👯‍♀️ *Resumen semanal - Las Amigas*
+
+`;
+        eventos.forEach(e => {
+          const t = TIPOS[e.tipo]||TIPOS.otro;
+          m += `${t.icon} *${e.nombre}*
+`;
+          if (e.fecha_inicio) m += `   📅 ${formatFecha(e.fecha_inicio)}${e.fecha_fin?' → '+formatFecha(e.fecha_fin):''}
+`;
+          if (e.hotel||e.lugar) m += `   📍 ${e.hotel||e.lugar}
+`;
+          m += `
+`;
         });
-      } else {
-        msg += `✅ ¡Todo saldado! No hay deudas pendientes.\n`;
+        const gastosUSD = gastos.filter(g=>g.moneda==='USD');
+        const gastosARS = gastos.filter(g=>g.moneda==='ARS');
+        if (gastosUSD.length||gastosARS.length) {
+          m += `💸 *Gastos registrados:*
+`;
+          if (gastosUSD.length) m += `   USD: ${gastosUSD.length} gastos
+`;
+          if (gastosARS.length) m += `   ARS: ${gastosARS.length} gastos
+`;
+          m += `
+`;
+        }
+        if (deudas.length) {
+          m += `⚠️ Hay deudas pendientes. Revisá la app!
+`;
+        } else if (gastos.length) {
+          m += `✅ ¡Todo saldado!
+`;
+        }
+        m += `
+🔗 bffapp-lasamigas.netlify.app`;
+        return m;
       }
-      msg += `\n¡Revisá la app para más detalles! 💅`;
-      return msg;
-    })(),
-    spa:        `🧖‍♀️ *¡Encuesta Spa Day abierta!*\n¡Chicas, voten en la app! 🗳️💅`,
-  };
-  if (type==='evento' && eventoId) {
-    const e = eventos.find(e=>e.id===eventoId);
-    const t = TIPOS[e?.tipo]||TIPOS.otro;
-    msgs.evento = `${t.icon} *${e?.nombre}*\n📅 ${e?.fecha_inicio?formatFecha(e.fecha_inicio):'Fecha TBD'}\n📍 ${e?.lugar||e?.hotel||'–'}\n\n¡Revisá la app! 💅`;
+
+      case 'itinerario': {
+        let m = `✈️ *Itinerario ${rio?.nombre||'Viaje'}*
+`;
+        if (rio?.fecha_inicio) m += `📅 ${formatFecha(rio.fecha_inicio)}`;
+        if (rio?.fecha_fin)    m += ` → ${formatFecha(rio.fecha_fin)}`;
+        m += `
+`;
+        if (rio?.hotel||rio?.lugar) m += `🏨 ${rio.hotel||rio.lugar}
+`;
+        m += `
+`;
+        if (days.length) {
+          days.forEach(d => {
+            m += `📅 *Día ${d.numero_dia} — ${d.titulo}*
+`;
+            if (d.fecha) m += `_(${formatFecha(d.fecha)})_
+`;
+            (d.actividades||[]).forEach(a => m += `• ${a.momento ? a.momento+': ' : ''}${a.nombre}
+`);
+            m += `
+`;
+          });
+        } else {
+          m += `_Itinerario por confirmar_
+`;
+        }
+        m += `🔗 bffapp-lasamigas.netlify.app`;
+        return m;
+      }
+
+      case 'pagos': {
+        let m = `💸 *Gastos y pagos - Las Amigas*
+`;
+        m += `Moneda: ${mon}
+
+`;
+        const gastMon = gastos.filter(g=>g.moneda===mon);
+        if (gastMon.length) {
+          m += `📋 *Gastos registrados:*
+`;
+          gastMon.forEach(g => {
+            const pago = window.chicas.find(c=>c.id===g.pagado_por);
+            m += `• ${g.nombre}: *${fmt(g.monto,mon)}*`;
+            if (pago) m += ` (pagó ${pago.nombre})`;
+            if (g.solo_registro) m += ` 📌`;
+            m += `
+`;
+          });
+          const total = gastMon.reduce((a,g)=>a+parseFloat(g.monto),0);
+          m += `*Total: ${fmt(total,mon)}*
+
+`;
+        } else {
+          m += `Sin gastos registrados en ${mon}
+
+`;
+        }
+        if (deudas.length) {
+          m += `💸 *Quién le debe a quién:*
+`;
+          deudas.forEach(t => {
+            m += `• ${t.de_chica?.nombre} → ${t.para_chica?.nombre}: *${fmt(t.monto,mon)}*
+`;
+          });
+          m += `
+¡Recuerden transferir antes del viaje! 🙏`;
+        } else {
+          m += `✅ ¡Todo saldado! No hay deudas pendientes.`;
+        }
+        return m;
+      }
+
+      case 'spa': {
+        let m = `🧖‍♀️ *¡Encuesta Spa Day abierta!*
+
+`;
+        m += `Chicas, ¡voten para organizar nuestro día de relax!
+
+`;
+        const polls = Object.values(window._polls||{});
+        polls.forEach(p => {
+          m += `📊 *${p.titulo}*
+`;
+          (p.opciones||[]).forEach(o => m += `• ${o.nombre}${o.votos?' ('+o.votos+' votos)':''}
+`);
+          m += `
+`;
+        });
+        m += `🔗 bffapp-lasamigas.netlify.app`;
+        return m;
+      }
+
+      case 'evento': {
+        const e = eventos.find(e=>e.id===eventoId);
+        if (!e) return '';
+        const t = TIPOS[e.tipo]||TIPOS.otro;
+        let m = `${t.icon} *${e.nombre}*
+
+`;
+        if (e.fecha_inicio) m += `📅 ${formatFecha(e.fecha_inicio)}${e.fecha_fin?' → '+formatFecha(e.fecha_fin):''}
+`;
+        if (e.hotel||e.lugar) m += `📍 ${e.hotel||e.lugar}
+`;
+        if (e.cupo_max) m += `👯 ${e.cupo_max} personas
+`;
+        if (e.descripcion) m += `
+${e.descripcion}
+`;
+        m += `
+🔗 bffapp-lasamigas.netlify.app`;
+        return m;
+      }
+
+      default: return `👯‍♀️ *BFFapp - Las Amigas*
+🔗 bffapp-lasamigas.netlify.app`;
+    }
   }
-  window.open('https://wa.me/?text='+encodeURIComponent(msgs[type]||msgs.general), '_blank');
+
+  const msg = buildMsg();
+  if (msg) window.open('https://wa.me/?text='+encodeURIComponent(msg), '_blank');
 }
 
 /* ══════════════════════════════════════════════

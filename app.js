@@ -230,21 +230,19 @@ function quitarComprobante() {
 }
 
 async function uploadComprobante(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      try {
-        const base64 = e.target.result.split(',')[1];
-        const res = await post('/upload', {
-          filename:    file.name,
-          contentType: file.type,
-          data:        base64,
-        });
-        resolve(res);
-      } catch(err) { reject(err); }
-    };
-    reader.readAsDataURL(file);
+  const CLOUD = 'dgora758p';
+  const PRESET = 'bffapp_comprobantes';
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('upload_preset', PRESET);
+  formData.append('folder', 'bffapp');
+  const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD}/auto/upload`, {
+    method: 'POST',
+    body: formData,
   });
+  if (!res.ok) throw new Error('Cloudinary upload failed');
+  const data = await res.json();
+  return { url: data.secure_url, filename: file.name };
 }
 
 async function saveGastoAPI(){const nombre=document.getElementById('fg-nombre').value.trim();const monto=parseFloat(document.getElementById('fg-monto').value);const pagadoPor=parseInt(document.getElementById('fg-pagadopor').value);const soloReg=document.getElementById('fg-solo')?.classList.contains('on')||false;if(!nombre||!monto||monto<=0)return;if(!soloReg&&!finState.selSplit.length)return;// Upload file if selected

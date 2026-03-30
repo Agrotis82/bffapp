@@ -266,17 +266,61 @@ async function uploadComprobante(file) {
   return { url: data.secure_url, filename: file.name };
 }
 
-async function saveGastoAPI(){const nombre=document.getElementById('fg-nombre').value.trim();const monto=parseFloat(document.getElementById('fg-monto').value);const pagadoPor=parseInt(document.getElementById('fg-pagadopor').value);const soloReg=document.getElementById('fg-solo')?.classList.contains('on')||false;if(!nombre||!monto||monto<=0)return;if(!soloReg&&!finState.selSplit.length)return;// Upload file if selected
+async function saveGastoAPI(){
+  const nombre    = document.getElementById('fg-nombre').value.trim();
+  const monto     = parseFloat(document.getElementById('fg-monto').value);
+  const pagadoPor = parseInt(document.getElementById('fg-pagadopor').value);
+  const soloReg   = document.getElementById('fg-solo')?.classList.contains('on') || false;
+  if(!nombre || !monto || monto<=0) return;
+  if(!soloReg && !finState.selSplit.length) return;
+
+  // Handle comprobante
   let comprobanteUrl  = finState.editingGasto?.comprobante_url  || null;
   let comprobanteName = finState.editingGasto?.comprobante_name || null;
-  if(finState.comprobanteFile){
-    try{const up=await uploadComprobante(finState.comprobanteFile);comprobanteUrl=up.url;comprobanteName=up.filename;}
-    catch(e){console.warn('Upload failed:',e);}
+
+  // User explicitly removed comprobante
+  if(finState.comprobanteUrl === null && finState.editingGasto?.comprobante_url) {
+    comprobanteUrl  = null;
+    comprobanteName = null;
   }
-  if(finState.comprobanteUrl===null) comprobanteUrl=null;
-  const payload={evento_id:finState.eventoId,nombre,monto,moneda:finState.selMon,categoria:finState.selCats.join(','),pagado_por:pagadoPor,participantes:soloReg?[]:finState.selSplit,notas:document.getElementById('fg-notas').value.trim(),fecha_registro:document.getElementById('fg-fecha')?.value||null,solo_registro:soloReg,comprobante_url:comprobanteUrl,comprobante_name:comprobanteName};
-  finState.comprobanteFile=null;
-  if(finState.editingGasto)await put(`/gastos/${finState.editingGasto.id}`,payload);else await post('/gastos',payload);closeModal();await Promise.all([refreshFinanzas(),renderHome()]);}
+
+  // User selected a new file — upload it
+  if(finState.comprobanteFile) {
+    try {
+      const up    = await uploadComprobante(finState.comprobanteFile);
+      comprobanteUrl  = up.url;
+      comprobanteName = up.filename;
+    } catch(e) {
+      console.warn('Upload failed:', e);
+      alert('No se pudo subir el comprobante. Verificá tu conexión.');
+      return;
+    }
+  }
+
+  const payload = {
+    evento_id:        finState.eventoId,
+    nombre,
+    monto,
+    moneda:           finState.selMon,
+    categoria:        finState.selCats.join(','),
+    pagado_por:       pagadoPor,
+    participantes:    soloReg ? [] : finState.selSplit,
+    notas:            document.getElementById('fg-notas').value.trim(),
+    fecha_registro:   document.getElementById('fg-fecha')?.value || null,
+    solo_registro:    soloReg,
+    comprobante_url:  comprobanteUrl,
+    comprobante_name: comprobanteName,
+  };
+
+  finState.comprobanteFile = null;
+  finState.comprobanteUrl  = null;
+
+  if(finState.editingGasto) await put(`/gastos/${finState.editingGasto.id}`, payload);
+  else await post('/gastos', payload);
+
+  closeModal();
+  await Promise.all([refreshFinanzas(), renderHome()]);
+}
 function confirmDeleteGasto(id){openModal(`<div class="modal-title">¿Eliminar gasto?</div><div style="font-size:13px;color:var(--text-sec);margin-bottom:1rem;">Esta acción no se puede deshacer.</div><div class="modal-btns"><button class="btn-cancel" onclick="closeModal()">Cancelar</button><button class="btn-danger" style="flex:2;" onclick="deleteGastoAPI(${id})">Eliminar</button></div>`);}
 async function deleteGastoAPI(id){await del(`/gastos/${id}`);closeModal();await Promise.all([refreshFinanzas(),renderHome()]);}
 async function toggleSaldado(id,saldado){await put(`/gastos/${id}/${saldado?'desaldar':'saldar'}`,{});await Promise.all([refreshFinanzas(),renderHome()]);}

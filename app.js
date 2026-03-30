@@ -12,9 +12,41 @@ const del  = async path => { const r = await fetch(API+path,{method:'DELETE'}); 
 /* ══ LOGIN ══ */
 let currentUser = null;
 
+const APP_PASSWORD = 'lasonce';
+
 function loadSession() {
   try { const s = localStorage.getItem('bffapp_user'); if(s) currentUser = JSON.parse(s); } catch(e) {}
   return !!currentUser;
+}
+
+function checkPassword() {
+  const passwordAuthorized = localStorage.getItem('bffapp_auth') === APP_PASSWORD;
+  return passwordAuthorized;
+}
+
+function showPasswordScreen() {
+  document.getElementById('password-screen').style.display = 'flex';
+  document.getElementById('login-screen').style.display    = 'none';
+  document.getElementById('app-shell').style.display       = 'none';
+  setTimeout(() => document.getElementById('pwd-input')?.focus(), 100);
+}
+
+function submitPassword() {
+  const val = document.getElementById('pwd-input').value;
+  if(val === APP_PASSWORD) {
+    localStorage.setItem('bffapp_auth', APP_PASSWORD);
+    document.getElementById('password-screen').style.display = 'none';
+    showLoginScreen();
+  } else {
+    const err = document.getElementById('pwd-error');
+    const inp = document.getElementById('pwd-input');
+    if(err) { err.style.display = 'block'; }
+    if(inp) { inp.style.borderColor = '#E24B4A'; inp.value = ''; inp.focus(); }
+    setTimeout(() => {
+      if(err) err.style.display = 'none';
+      if(inp) inp.style.borderColor = '';
+    }, 2000);
+  }
 }
 function saveSession(chica) { currentUser = chica; localStorage.setItem('bffapp_user', JSON.stringify(chica)); }
 function clearSession() { currentUser = null; localStorage.removeItem('bffapp_user'); }
@@ -518,12 +550,16 @@ async function init(){
     renderBdayBanner();
     renderChicas();
 
-    // Login check
-    if(loadSession()){
+    // Password + login check
+    if(!checkPassword()){
+      showPasswordScreen();
+    } else if(loadSession()){
+      document.getElementById('password-screen').style.display='none';
       document.getElementById('login-screen').style.display='none';
       document.getElementById('app-shell').style.display='flex';
       postLoginRender();
-    }else{
+    } else {
+      document.getElementById('password-screen').style.display='none';
       showLoginScreen();
     }
 
